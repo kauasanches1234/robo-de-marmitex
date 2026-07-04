@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "robo-de-marmitex",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["live-server", ".", "--port=3457", "--no-browser"],
+      "port": 3457
+    }
+  ]
+}

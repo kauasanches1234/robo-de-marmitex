@@ -1,0 +1,11 @@
+# dependências / build
+node_modules/
+dist/
+*.log
+
+# arquivos de sistema
+.DS_Store
+Thumbs.db
+
+# config local do Claude Code (não versionar credenciais/estado)
+.claude/settings.local.json

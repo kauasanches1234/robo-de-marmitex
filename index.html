@@ -1,0 +1,1597 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Robô de Marmitex — Painel do Dono</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;500;600;700&family=Poppins:wght@500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#F1F5F9;--surface:#FFFFFF;--ink:#0F172A;--muted:#475569;--faint:#94A3B8;--line:#E2E8F0;
+    --primary:#4F46E5;--primary-soft:#EEF2FF;--brand:#EA580C;--brand-soft:#FFF7ED;
+    --ok:#16A34A;--ok-soft:#F0FDF4;--warn:#D97706;--warn-soft:#FFFBEB;--danger:#DC2626;--danger-soft:#FEF2F2;
+    --wa-bg:#ECE5DD;--wa-sent:#DCF8C6;--wa-recv:#FFFFFF;--wa-accent:#25D366;
+    --r-lg:18px;--r-md:13px;--r-sm:11px;
+    --shadow:0 1px 2px rgba(15,23,42,.04),0 6px 16px rgba(15,23,42,.045);--shadow-sm:0 1px 2px rgba(15,23,42,.05);
+    --ease:cubic-bezier(.4,0,.2,1);--ease-out:cubic-bezier(.16,1,.3,1);--spring:cubic-bezier(.34,1.4,.5,1);
+    --hover-lift:0 4px 14px rgba(15,23,42,.12);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{height:100%;}
+  body{font-family:'Open Sans',-apple-system,system-ui,sans-serif;background:var(--bg);color:var(--ink);line-height:1.5;-webkit-font-smoothing:antialiased;}
+  h1,h2,h3{font-family:'Poppins',sans-serif;letter-spacing:-.01em;}
+  button{font-family:inherit;cursor:pointer;border:none;background:none;}
+  input,select,textarea{font-family:inherit;}
+  ::-webkit-scrollbar{width:8px;height:8px;}::-webkit-scrollbar-thumb{background:#CBD5E1;border-radius:4px;}
+
+  .topbar{height:64px;background:var(--surface);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:14px;padding:0 24px;position:sticky;top:0;z-index:30;}
+  .logo{width:38px;height:38px;border-radius:11px;flex:none;background:linear-gradient(145deg,#FB923C 0%,#EA580C 55%,#C2410C 100%);box-shadow:0 2px 8px rgba(234,88,12,.28),inset 0 1px 0 rgba(255,255,255,.25);display:grid;place-items:center;color:#fff;}
+  .topbar .title{font-weight:700;font-size:16px;}.topbar .subtitle{font-size:12px;color:var(--faint);}
+  .pill{margin-left:auto;display:inline-flex;align-items:center;gap:7px;background:var(--ok-soft);color:var(--ok);font-weight:600;font-size:12.5px;padding:6px 12px;border-radius:999px;}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--ok);}
+
+  /* unified buttons (Apple-ish) */
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font-weight:600;font-size:13.5px;padding:10px 16px;border-radius:var(--r-md);transition:filter .15s,background .15s,transform .04s;}
+  .btn:active{transform:translateY(1px);}
+  .btn-primary{background:var(--primary);color:#fff;}.btn-primary:hover{filter:brightness(1.06);}
+  .btn-ok{background:var(--ok);color:#fff;}.btn-ok:hover{filter:brightness(1.05);}
+  .btn-warn{background:var(--warn);color:#fff;}.btn-warn:hover{filter:brightness(1.05);}
+  .btn-ghost{background:var(--surface);color:var(--ink);border:1px solid var(--line);}.btn-ghost:hover{background:var(--bg);}
+  .btn-soft{background:var(--primary-soft);color:var(--primary);font-weight:700;}.btn-soft:hover{filter:brightness(.97);}
+
+  .stage{max-width:980px;margin:0 auto;padding:24px;}
+  .panel{display:flex;flex-direction:column;gap:18px;}
+  .tabs{display:flex;gap:6px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);padding:5px;box-shadow:var(--shadow-sm);}
+  .tab{flex:1;display:inline-flex;align-items:center;justify-content:center;gap:8px;font-weight:600;font-size:13.5px;color:var(--muted);padding:9px;border-radius:var(--r-sm);transition:background .15s,color .15s;}
+  .tab.active{background:var(--primary);color:#fff;}.tab:not(.active):hover{background:var(--bg);}
+
+  .kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+  .kpi{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:16px;box-shadow:var(--shadow-sm);}
+  .kpi .label{font-size:12px;color:var(--muted);font-weight:600;display:flex;align-items:center;gap:6px;}
+  .kpi .value{font-family:'Poppins';font-size:26px;font-weight:700;margin-top:6px;}.kpi .value small{font-size:14px;color:var(--faint);font-weight:600;}
+
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--shadow);overflow:hidden;}
+  .card-h{padding:14px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:9px;}
+  .card-h h3{font-size:14.5px;font-weight:600;}.card-h .sub{font-size:12px;color:var(--faint);font-weight:500;}
+  .card-b{padding:18px;}
+  .ico{width:18px;height:18px;flex:none;}.ico-box{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;flex:none;}
+  .step-badge{margin-left:auto;font-size:11.5px;font-weight:700;padding:4px 10px;border-radius:999px;background:var(--primary-soft);color:var(--primary);}
+  .btn-new{margin-left:auto;display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;color:var(--primary);background:var(--primary-soft);padding:6px 11px;border-radius:999px;}.btn-new:hover{filter:brightness(.97);}
+
+  .waiting-card{display:flex;align-items:center;justify-content:center;min-height:300px;text-align:center;padding:40px 28px;}
+  .waiting-ico{width:80px;height:80px;margin:0 auto 18px;border-radius:22px;background:var(--brand-soft);color:var(--brand);display:grid;place-items:center;box-shadow:inset 0 0 0 1px #FED7AA;}
+  .waiting-card h3{font-size:21px;font-weight:700;}.waiting-card p{font-size:14px;color:var(--muted);margin-top:8px;max-width:380px;}
+  .waiting-badge{margin-top:18px;display:inline-flex;align-items:center;gap:8px;font-size:12.5px;font-weight:600;color:var(--ok);background:var(--ok-soft);padding:7px 14px;border-radius:999px;}
+
+  .inbox{display:flex;flex-direction:column;max-height:240px;overflow-y:auto;}
+  .inbox-row{display:flex;gap:11px;align-items:center;padding:11px 16px;cursor:pointer;border-bottom:1px solid var(--line);transition:background .12s;}
+  .inbox-row:last-child{border-bottom:none;}.inbox-row:hover{background:var(--bg);}
+  .inbox-row.active{background:var(--primary-soft);box-shadow:inset 3px 0 0 var(--primary);}
+  .inbox-av{width:40px;height:40px;border-radius:var(--r-sm);background:#E0E7FF;color:var(--primary);display:grid;place-items:center;font-weight:700;font-family:'Poppins';font-size:13px;flex:none;}
+  .inbox-main{flex:1;min-width:0;}.inbox-name{font-weight:700;font-size:13.5px;}
+  .inbox-last{font-size:12px;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px;}
+  .inbox-right{display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex:none;}
+  .chip{font-size:10.5px;font-weight:700;padding:3px 8px;border-radius:999px;white-space:nowrap;}
+  .chip.warn{background:var(--warn-soft);color:#B45309;}.chip.primary{background:var(--primary-soft);color:var(--primary);}
+  .chip.ok{background:var(--ok-soft);color:var(--ok);}.chip.slate{background:#F1F5F9;color:var(--muted);}
+  .unread{min-width:18px;height:18px;border-radius:9px;background:var(--wa-accent);color:#fff;font-size:11px;font-weight:700;display:grid;place-items:center;padding:0 5px;}
+
+  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:stretch;}
+  /* rodapés alinhados: os 2 cards têm a mesma altura e o total do Pedido vai pro fim */
+  .two-col>.card{display:flex;flex-direction:column;}
+  .two-col .card-b{flex:1;display:flex;flex-direction:column;}
+  .two-col .order-foot{margin-top:auto;}
+  .conv-top{display:flex;align-items:center;gap:12px;margin-bottom:16px;}
+  .conv-av{width:44px;height:44px;border-radius:var(--r-md);background:var(--primary-soft);color:var(--primary);display:grid;place-items:center;font-weight:700;font-family:'Poppins';flex:none;}
+  .conv-name{font-weight:700;font-size:15px;}.conv-phone{font-size:12.5px;color:var(--faint);}
+  .order-list{display:flex;flex-direction:column;}
+  .order-row{display:flex;align-items:flex-start;gap:10px;padding:11px 2px;border-bottom:1px solid var(--line);font-size:13.5px;}
+  .order-row:last-child{border-bottom:none;}
+  .order-row .q{font-weight:700;color:var(--brand);min-width:26px;padding-top:1px;}
+  .order-row .nm{flex:1;font-weight:600;display:flex;align-items:center;gap:7px;flex-wrap:wrap;}
+  .order-row .note{flex-basis:100%;font-weight:500;font-size:12px;color:var(--brand);}
+  .order-row .pr{font-weight:700;padding-top:1px;}
+  .etq{font-size:10px;font-weight:800;padding:1px 7px;border-radius:6px;letter-spacing:.02em;background:#F1F5F9;color:#475569;}
+  .cfg-sub{font-size:12px;font-weight:700;color:var(--ink);display:flex;align-items:center;gap:7px;margin:2px 0 11px;}
+  .cfg-sub svg{color:var(--brand);}
+  .cfg-sub.beb{margin-top:20px;padding-top:18px;border-top:1px solid var(--line);}
+  .cfg-sub.beb svg{color:#0EA5E9;}
+  .etq-P{background:#EEF2FF;color:#4F46E5;}.etq-M{background:#FFFBEB;color:#B45309;}.etq-G{background:#F0FDF4;color:#16A34A;}
+  .order-empty{font-size:13px;color:var(--faint);text-align:center;padding:14px 0;}
+  .order-foot{margin-top:6px;padding-top:14px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:11px;}
+  .info-line{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);}
+  .info-line svg{color:var(--faint);flex:none;}.info-line.pending{color:var(--faint);font-style:italic;}
+  #payStatus:not(:empty){display:flex;flex-direction:column;gap:10px;align-items:flex-start;}
+  .pay-badge{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;padding:5px 11px;border-radius:999px;}
+  .btn-confirm{width:100%;}
+  .total-line{display:flex;justify-content:space-between;align-items:baseline;margin-top:3px;padding-top:13px;border-top:1px solid var(--line);}
+  .total-line .lbl{font-size:13px;color:var(--muted);font-weight:600;}
+  .total-line .val{font-family:'Poppins';font-size:24px;font-weight:700;color:var(--ink);letter-spacing:-.02em;}
+
+  /* pedidos confirmados */
+  .ped-head{display:flex;align-items:center;gap:11px;margin-bottom:13px;}
+  .ped-av{width:38px;height:38px;border-radius:11px;background:var(--primary-soft);color:var(--primary);display:grid;place-items:center;font-weight:700;font-family:'Poppins';font-size:13px;flex:none;}
+  .ped-name{font-weight:700;font-size:14px;}.ped-sub{font-size:12px;color:var(--faint);}
+  .ped-itens{display:flex;flex-direction:column;gap:7px;margin-bottom:13px;}
+  .ped-it{display:flex;align-items:flex-start;gap:9px;font-size:13.5px;}
+  .ped-it .q{font-weight:700;color:var(--brand);min-width:24px;}
+  .ped-it .nm{flex:1;font-weight:600;display:flex;align-items:center;gap:7px;flex-wrap:wrap;}
+  .ped-it .obs{flex-basis:100%;font-size:12px;color:var(--brand);font-weight:500;}
+  .ped-it .pr{font-weight:700;}
+  .ped-foot{display:flex;flex-direction:column;gap:8px;padding-top:13px;border-top:1px solid var(--line);}
+  .ped-info{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--muted);}
+  .ped-info svg{color:var(--faint);flex:none;}
+  .ped-total{margin-left:auto;font-family:'Poppins';font-weight:700;color:var(--ink);font-size:15px;}
+  .ped-empty{padding:48px 24px;text-align:center;color:var(--faint);}.ped-empty svg{margin-bottom:10px;}
+  .btn-fin{display:inline-flex;align-items:center;gap:7px;font-weight:700;font-size:12.5px;color:var(--muted);background:var(--surface);border:1px solid var(--line);padding:7px 13px;border-radius:999px;cursor:pointer;transition:background .15s,color .15s,border-color .15s;}
+  .btn-fin:hover{background:var(--danger-soft);color:var(--danger);border-color:#FCA5A5;}
+  /* mapas / zonas */
+  #mapaLeaflet{height:520px;width:100%;border-radius:var(--r-lg);z-index:1;background:#E8EEF4;display:flex;align-items:center;justify-content:center;}
+  /* controlador prático de edição da malha */
+  .mesh-ctrl{padding:14px 16px;border:1px solid var(--primary);box-shadow:0 4px 18px rgba(79,70,229,.12);}
+  .mesh-ctrl-head{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--ink);flex-wrap:wrap;}
+  .mesh-ctrl-head b{font-weight:700;}
+  .mesh-hint{font-size:11.5px;color:var(--faint);font-weight:600;}
+  .mesh-chips{display:flex;gap:8px;overflow-x:auto;padding:12px 0 4px;scrollbar-width:thin;-webkit-overflow-scrolling:touch;}
+  .mesh-chip{flex:none;display:inline-flex;align-items:center;gap:7px;padding:8px 13px;border-radius:999px;background:var(--bg);border:1.5px solid transparent;font-size:12.5px;font-weight:700;color:var(--muted);cursor:pointer;white-space:nowrap;transition:background .15s,border-color .15s,color .15s;}
+  .mesh-chip .mc-dot{width:11px;height:11px;border-radius:50%;flex:none;}
+  .mesh-chip.area .mc-dot{border-radius:3px;}
+  .mesh-chip.sel{background:var(--surface);border-color:var(--primary);color:var(--ink);box-shadow:var(--shadow-sm);}
+  .mesh-editor{margin-top:10px;padding-top:14px;border-top:1px solid var(--line);}
+  .mesh-ed-name{display:flex;align-items:center;gap:9px;font-weight:700;font-size:15px;color:var(--ink);margin-bottom:12px;}
+  .mesh-ed-dot{width:15px;height:15px;border-radius:50%;flex:none;border:2px solid #fff;box-shadow:0 0 0 1px var(--line);}
+  .mesh-ed-type{font-size:11px;font-weight:700;color:var(--muted);background:var(--bg);padding:3px 9px;border-radius:999px;margin-left:auto;}
+  .mesh-radius{display:flex;align-items:center;gap:12px;}
+  .mesh-step{width:46px;height:46px;flex:none;border-radius:13px;background:var(--primary-soft);color:var(--primary);font-size:26px;font-weight:700;line-height:1;display:flex;align-items:center;justify-content:center;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:background .15s,transform .12s var(--spring);}
+  .mesh-step:hover{background:#E0E7FF;}
+  .mesh-step:active{transform:scale(.9);}
+  .mesh-radius input[type=range]{flex:1;height:34px;accent-color:var(--primary);cursor:grab;min-width:0;}
+  .mesh-radius input[type=range]:active{cursor:grabbing;}
+  .mesh-km{flex:none;min-width:72px;text-align:right;font-size:17px;font-weight:800;color:var(--primary);font-variant-numeric:tabular-nums;}
+  .mesh-ed-actions{display:flex;align-items:center;gap:10px;margin-top:14px;flex-wrap:wrap;}
+  .mesh-fee{display:flex;align-items:center;gap:7px;background:var(--bg);padding:7px 12px;border-radius:11px;}
+  .mesh-fee label{font-size:12.5px;font-weight:700;color:var(--muted);}
+  .mesh-fee input{width:74px;border:1px solid var(--line);border-radius:9px;padding:8px 9px;font-size:14px;font-weight:700;outline:none;text-align:right;background:var(--surface);}
+  .mesh-fee input:focus{border-color:var(--primary);}
+  .mesh-act{display:inline-flex;align-items:center;gap:6px;padding:10px 14px;border-radius:11px;font-size:13px;font-weight:700;background:var(--bg);color:var(--ink);cursor:pointer;-webkit-tap-highlight-color:transparent;transition:background .15s,transform .12s var(--spring);}
+  .mesh-act:active{transform:scale(.96);}
+  .mesh-act.danger{color:var(--danger);margin-left:auto;}.mesh-act.danger:hover{background:var(--danger-soft);}
+  .mesh-editor.empty{opacity:.5;pointer-events:none;}
+  .leaflet-container{font-family:'Open Sans',sans-serif;}
+  .map-erro{color:var(--muted);font-size:14px;text-align:center;padding:24px;max-width:320px;}
+  .switch.blue.on{background:var(--primary);}
+  .addr-set{display:flex;gap:8px;align-items:stretch;}
+  .addr-set input{flex:1 1 auto;min-width:0;height:42px;}
+  .btn-loc{flex:0 0 auto;height:42px;display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:0 18px;border:0;border-radius:var(--r-sm);background:var(--primary);color:#fff;font-weight:600;font-size:13px;white-space:nowrap;cursor:pointer;transition:filter .15s;}
+  .btn-loc:hover{filter:brightness(1.07);}
+  .btn-loc:disabled{opacity:.6;cursor:default;}
+  .loc-status{font-size:12px;color:var(--faint);margin-top:7px;min-height:15px;}
+  .loc-status.ok{color:var(--ok);}.loc-status.err{color:#DC2626;}
+  .btn-add-zona.slate{background:#334155;}
+  .card-hint{font-size:12.5px;color:var(--muted);margin:0;padding:11px 16px 13px;line-height:1.45;border-bottom:1px solid var(--line);}
+  .area-row .area-dot{width:13px;height:13px;border-radius:4px;background:#334155;}
+  .area-nome{border:1px solid var(--line);border-radius:8px;padding:5px 9px;font-size:13.5px;font-weight:700;color:var(--ink);width:100%;background:var(--surface);}
+  .area-nome:focus{outline:none;border-color:#334155;}
+  .zona-fora{background:var(--danger-soft);border-radius:10px;}
+  .zona-warn{font-size:10.5px;font-weight:700;color:var(--danger);margin-left:6px;white-space:nowrap;}
+  /* alerta "quer atendente" ao lado do Assumir */
+  .alert-flag{flex:none;display:inline-flex;align-items:center;justify-content:center;width:34px;height:30px;border:0;border-radius:8px;background:#DC2626;color:#fff;cursor:pointer;margin-right:8px;box-shadow:0 2px 8px rgba(220,38,38,.4);animation:flagPulse 1.3s ease-in-out infinite;}
+  .alert-flag:hover{background:#B91C1C;}
+  @keyframes flagPulse{0%,100%{box-shadow:0 0 0 0 rgba(220,38,38,.5);}50%{box-shadow:0 0 0 6px rgba(220,38,38,0);}}
+  @media (prefers-reduced-motion:reduce){.alert-flag{animation:none;}}
+  .btn-export{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;color:var(--muted);background:var(--bg);padding:6px 11px;border-radius:999px;margin-left:auto;margin-right:8px;}
+  .btn-export:hover{filter:brightness(.97);}
+  .btn-new{margin-left:0;}
+  .inbox-flag{display:inline-flex;width:9px;height:9px;border-radius:2px;background:#DC2626;flex:none;}
+  /* card flutuante */
+  .flag-card{position:fixed;right:22px;bottom:22px;width:310px;background:var(--surface);border:1px solid var(--line);border-left:4px solid #DC2626;border-radius:14px;box-shadow:0 12px 34px rgba(15,23,42,.22);padding:15px 16px;z-index:60;opacity:0;transform:translateY(14px) scale(.97);pointer-events:none;transition:opacity .22s,transform .22s;}
+  .flag-card.show{opacity:1;transform:none;pointer-events:auto;}
+  .flag-card-top{display:flex;align-items:flex-start;gap:11px;}
+  .flag-card-ico{flex:none;width:34px;height:34px;border-radius:9px;background:#FEE2E2;color:#DC2626;display:flex;align-items:center;justify-content:center;}
+  .flag-card-body{flex:1;min-width:0;}
+  .flag-card-name{font-weight:700;font-size:14px;color:var(--ink);}
+  .flag-card-msg{font-size:12.5px;color:var(--muted);margin-top:1px;}
+  .flag-card-x{flex:none;border:0;background:none;font-size:20px;line-height:1;color:var(--faint);cursor:pointer;padding:0 2px;}
+  .flag-card-q{font-size:13px;color:var(--ink);margin:12px 0 12px;line-height:1.4;}
+  .flag-card-actions{display:flex;gap:8px;}
+  .fc-btn{flex:1;border:0;border-radius:9px;padding:9px 0;font-weight:700;font-size:13px;cursor:pointer;transition:filter .15s;}
+  .fc-go{background:var(--bg);color:var(--ink);}
+  .fc-sig{background:#DC2626;color:#fff;}.fc-sig:hover{background:#B91C1C;}
+  .flag-card.done .fc-sig{background:var(--ok);}.flag-card.done .fc-sig::after{content:" ✓";}
+  #tabMap.maps-off #mapaLeaflet,#tabMap.maps-off #zonaList,#tabMap.maps-off #addZonaBtn{opacity:.45;pointer-events:none;filter:grayscale(.4);}
+  .btn-add-zona{display:inline-flex;align-items:center;gap:7px;font-weight:700;font-size:12.5px;color:#fff;background:var(--primary);padding:8px 13px;border-radius:999px;cursor:pointer;transition:filter .15s;}
+  .btn-add-zona:hover{filter:brightness(1.06);}
+  .zona-row{display:flex;align-items:center;gap:12px;padding:13px 16px;border-bottom:1px solid var(--line);}
+  .zona-row:last-child{border-bottom:none;}
+  .zona-dot{width:16px;height:16px;border-radius:50%;flex:none;border:2px solid #fff;box-shadow:0 0 0 1px var(--line);}
+  .zona-main{flex:1;min-width:0;}
+  .zona-nome{font-weight:700;font-size:13.5px;}
+  .zona-raio{display:flex;align-items:center;gap:8px;margin-top:5px;}
+  .zona-raio input[type=range]{flex:1;accent-color:var(--primary);}
+  .zona-raio .km{font-size:12px;color:var(--muted);font-weight:600;min-width:54px;text-align:right;}
+  .zona-taxa{display:flex;align-items:center;gap:6px;flex:none;}
+  .zona-taxa label{font-size:12px;color:var(--muted);font-weight:600;}
+  .zona-taxa input{width:66px;border:1px solid var(--line);border-radius:9px;padding:7px 9px;font-size:13px;outline:none;text-align:right;}
+  .zona-taxa input:focus{border-color:var(--primary);}
+  .zona-del{width:32px;height:32px;border-radius:9px;display:grid;place-items:center;color:var(--faint);background:var(--bg);flex:none;cursor:pointer;transition:background .15s,color .15s;}
+  .zona-del:hover{background:#FEE2E2;color:#DC2626;}
+  .zona-empty{padding:30px;text-align:center;color:var(--faint);font-size:13px;}
+  @media (max-width:560px){.zona-row{flex-wrap:wrap;}}
+  .ped-card{padding:16px 18px;}
+  .moto-btn{align-self:flex-end;margin-top:6px;width:42px;height:42px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;background:#1E3A8A;color:#93C5FD;cursor:pointer;overflow:hidden;transition:background .22s,color .22s,filter .15s,transform .08s;}
+  .moto-btn:hover{filter:brightness(1.12);}
+  .moto-btn:active{transform:scale(.93);}
+  .moto-btn.on{background:#15803D;color:#86EFAC;}
+  .moto-ico{display:inline-flex;}
+  .moto-btn.go{animation:moto-pop .45s ease;}
+  .moto-btn.on .moto-ico{animation:moto-ride .85s ease-in-out infinite;}
+  @keyframes moto-pop{0%{transform:scale(1)}40%{transform:scale(1.14)}100%{transform:scale(1)}}
+  @keyframes moto-ride{0%,100%{transform:translate(-1px,0) rotate(0)}25%{transform:translate(1px,-1.4px) rotate(-3deg)}50%{transform:translate(2px,0) rotate(0)}75%{transform:translate(1px,-1.4px) rotate(-3deg)}}
+  @media (prefers-reduced-motion:reduce){.moto-btn.on .moto-ico,.moto-btn.go{animation:none;}}
+
+  /* conversa (substitui o telefone) */
+  .conversa-card{display:flex;flex-direction:column;}
+  .conv-msgs{flex:1;min-height:230px;max-height:360px;overflow-y:auto;padding:14px;background-color:var(--wa-bg);background-image:radial-gradient(rgba(0,0,0,.02) 1px,transparent 1px);background-size:18px 18px;display:flex;flex-direction:column;gap:7px;}
+  .conv-msgs .empty{color:var(--faint);font-size:12.5px;text-align:center;margin:auto;}
+  .msg{max-width:86%;padding:7px 11px 6px;border-radius:10px;font-size:13px;box-shadow:var(--shadow-sm);white-space:pre-wrap;word-wrap:break-word;}
+  .msg .t{display:block;font-size:10px;color:var(--faint);text-align:right;margin-top:2px;}
+  .msg.bot{align-self:flex-start;background:var(--wa-recv);border-top-left-radius:3px;}
+  .msg.cust{align-self:flex-end;background:var(--wa-sent);border-top-right-radius:3px;}
+  .msg.agent{align-self:flex-start;background:#FFF3D6;border-top-left-radius:3px;border-left:3px solid var(--warn);}
+  .msg .tag{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:700;margin-bottom:2px;text-transform:uppercase;letter-spacing:.03em;}
+  .msg.bot .tag{color:var(--primary);}.msg.agent .tag{color:var(--warn);}
+  .typing{align-self:flex-start;background:#fff;padding:10px 14px;border-radius:10px;border-top-left-radius:3px;box-shadow:var(--shadow-sm);display:inline-flex;gap:4px;}
+  .typing span{width:6px;height:6px;border-radius:50%;background:#9CA3AF;animation:bounce 1.2s infinite;}
+  .typing span:nth-child(2){animation-delay:.2s}.typing span:nth-child(3){animation-delay:.4s}
+  @keyframes bounce{0%,60%,100%{transform:translateY(0);opacity:.5}30%{transform:translateY(-5px);opacity:1}}
+  .conv-foot{border-top:1px solid var(--line);padding:12px 14px;background:var(--surface);}
+  .conv-mode{display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--muted);margin-bottom:9px;}
+  .conv-mode.agent-on{color:var(--warn);font-weight:600;}
+  .conv-input-row{display:flex;gap:8px;align-items:center;}
+  .conv-input-row input{flex:1;border:1px solid var(--line);border-radius:999px;padding:10px 15px;font-size:13.5px;outline:none;}
+  .conv-input-row input:focus{border-color:var(--primary);}
+  .conv-input-row.agent input:focus{border-color:var(--warn);}
+  .conv-send{width:42px;height:42px;border-radius:50%;flex:none;background:var(--primary);color:#fff;display:grid;place-items:center;transition:filter .15s;}
+  .conv-send:hover{filter:brightness(1.06);}
+  .conv-send.agent{background:var(--warn);}
+  .btn-take{font-size:11.5px;font-weight:700;padding:5px 11px;border-radius:999px;background:var(--warn-soft);color:#B45309;margin-left:auto;}
+  .btn-take.on{background:var(--warn);color:#fff;}
+
+  /* config */
+  .field{margin-bottom:12px;}
+  .field label{display:block;font-size:12px;font-weight:700;color:var(--muted);margin-bottom:5px;}
+  .field input,.field select,.field textarea{width:100%;border:1px solid var(--line);border-radius:var(--r-sm);padding:9px 12px;font-size:13.5px;outline:none;background:var(--surface);}
+  .field input:focus,.field select:focus,.field textarea:focus{border-color:var(--primary);}
+  .field input:disabled{background:var(--bg);color:var(--faint);}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .toggle-row{display:flex;align-items:center;gap:12px;padding:11px 13px;background:var(--bg);border-radius:var(--r-sm);margin-bottom:12px;}
+  .toggle-row .tt{flex:1;}.toggle-row .tt .h{font-weight:700;font-size:13.5px;}.toggle-row .tt .s{font-size:12px;color:var(--faint);}
+  .switch{width:46px;height:27px;border-radius:999px;background:#CBD5E1;position:relative;flex:none;transition:background .18s;}
+  .switch.on{background:var(--ok);}
+  .switch::after{content:"";position:absolute;top:3px;left:3px;width:21px;height:21px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.2);transition:left .18s;}
+  .switch.on::after{left:22px;}
+  .menu-head{display:grid;grid-template-columns:1.3fr .6fr 64px 1.3fr 34px;gap:8px;font-size:11px;font-weight:700;color:var(--faint);text-transform:uppercase;letter-spacing:.03em;margin-bottom:6px;padding:0 2px;}
+  .menu-row{display:grid;grid-template-columns:1.3fr .6fr 64px 1.3fr 34px;gap:8px;align-items:center;margin-bottom:8px;}
+  .menu-row input,.menu-row select{border:1px solid var(--line);border-radius:9px;padding:8px 10px;font-size:13px;outline:none;width:100%;}
+  .menu-row input:focus,.menu-row select:focus{border-color:var(--primary);}
+  .icon-del{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;color:var(--faint);background:var(--bg);flex:none;transition:background .15s,color .15s;}
+  .icon-del:hover{background:#FEE2E2;color:#DC2626;}
+  .pec-row{display:flex;gap:8px;align-items:flex-start;margin-bottom:8px;}
+  .pec-row textarea{flex:1;border:1px solid var(--line);border-radius:9px;padding:8px 11px;font-size:13px;outline:none;resize:vertical;min-height:38px;}
+  .pec-row textarea:focus{border-color:var(--primary);}
+  .btn-add{display:inline-flex;align-items:center;gap:7px;font-weight:700;font-size:13px;color:var(--primary);background:var(--primary-soft);padding:9px 14px;border-radius:var(--r-sm);margin-top:4px;}.btn-add:hover{filter:brightness(.97);}
+  .note-box{background:var(--primary-soft);border-radius:var(--r-sm);padding:12px 14px;font-size:12.5px;color:#3730A3;display:flex;gap:9px;}
+  .ai-preview{background:#0F172A;border-radius:var(--r-md);padding:14px 16px;font-family:ui-monospace,Menlo,monospace;font-size:12px;color:#CBD5E1;white-space:pre-wrap;line-height:1.6;max-height:230px;overflow:auto;}
+  .ai-preview b{color:#FBBF24;}
+  .teach{display:flex;gap:8px;align-items:center;}
+  .teach input{flex:1;border:1px solid var(--line);border-radius:var(--r-sm);padding:10px 13px;font-size:13px;outline:none;}.teach input:focus{border-color:var(--primary);}
+
+  /* save bar */
+  .save-bar{position:sticky;bottom:0;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--shadow);padding:14px 18px;display:flex;align-items:center;gap:12px;}
+  .save-bar .st{flex:1;font-size:13px;color:var(--muted);}
+  .save-bar .st.dirty{color:var(--warn);font-weight:600;}
+
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;font-weight:600;font-size:13.5px;padding:11px 18px;border-radius:var(--r-md);box-shadow:var(--shadow);opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:50;}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+  .block-overlay{display:none;position:fixed;inset:0;z-index:80;align-items:center;justify-content:center;padding:24px;background:rgba(15,23,42,.72);backdrop-filter:blur(4px);}
+  .block-card{background:var(--surface);border-radius:22px;box-shadow:0 20px 60px rgba(0,0,0,.4);padding:34px 30px;max-width:400px;text-align:center;}
+  .block-ico{width:72px;height:72px;border-radius:20px;margin:0 auto 18px;background:var(--danger-soft);color:var(--danger);display:grid;place-items:center;}
+  .block-card h2{font-size:22px;}.block-card p{font-size:14px;color:var(--muted);margin-top:10px;line-height:1.6;}
+  .block-tag{display:inline-block;margin-top:18px;font-size:12px;font-weight:600;color:var(--danger);background:var(--danger-soft);padding:7px 14px;border-radius:999px;}
+
+  @media (max-width:820px){.kpis{grid-template-columns:1fr;}.two-col{grid-template-columns:1fr;}.menu-head{display:none;}.menu-row{grid-template-columns:1fr 1fr;}.grid2{grid-template-columns:1fr;}}
+
+  /* ===== responsivo / celular ===== */
+  @media (max-width:600px){
+    .stage{padding:14px;}
+    .panel{gap:14px;}
+    .topbar{height:auto;min-height:58px;padding:9px 14px;gap:10px;}
+    .topbar .title{font-size:15px;line-height:1.2;}
+    .topbar .subtitle{display:none;}
+    .pill{padding:5px 10px;font-size:11.5px;}
+    .tabs{gap:3px;padding:4px;}
+    .tab{flex-direction:column;gap:3px;font-size:10.5px;padding:7px 2px;line-height:1.1;text-align:center;}
+    .tab svg{width:16px;height:16px;}
+    h2{font-size:19px;}
+    .panel-head{gap:8px;}
+    .panel-head p{font-size:12.5px;}
+    .card-h{flex-wrap:wrap;padding:13px 14px;row-gap:10px;}
+    .card-h h3{font-size:14.5px;}
+    .card-b{padding:14px;}
+    /* botão "adicionar" vira largura total embaixo do título */
+    .card-h .btn-add-zona{order:5;flex:1 1 100%;margin-left:0 !important;justify-content:center;}
+    .card-hint{padding:10px 14px 12px;}
+    /* linhas de zona/área: empilham sem vazar */
+    .zona-row{flex-wrap:wrap;align-items:center;gap:8px 10px;padding:13px 14px;}
+    .zona-main{flex:1 1 calc(100% - 26px);}
+    .zona-taxa{margin-left:26px;}
+    .zona-del{margin-left:auto;}
+    .addr-set{flex-wrap:wrap;}
+    .addr-set input{flex:1 1 100%;}
+    .btn-loc{flex:1 1 100%;}
+    #mapaLeaflet{height:72vh;min-height:380px;}
+    .mesh-ctrl{padding:13px 13px;}
+    .mesh-step{width:52px;height:52px;}
+    .mesh-radius input[type=range]{height:40px;}
+    .mesh-ed-actions .mesh-act{flex:1;justify-content:center;}
+    .flag-card{left:14px;right:14px;width:auto;bottom:14px;}
+    .moto-btn{align-self:flex-end;}
+  }
+  @media (max-width:380px){
+    .stage{padding:11px;}
+    .tab{font-size:10px;}
+    .kpi .value{font-size:21px;}
+  }
+
+  /* ===== interações naturais — camada final (sobrescreve transições base) ===== */
+  .btn,.tab,.btn-new,.btn-export,.btn-add-zona,.btn-loc,.btn-take,.btn-fin,.zona-del,.fc-btn,.alert-flag,.flag-card-x,.moto-btn{
+    -webkit-tap-highlight-color:transparent;
+    transition:background .18s var(--ease),color .18s var(--ease),border-color .18s var(--ease),box-shadow .2s var(--ease),filter .18s var(--ease),transform .14s var(--spring) !important;
+  }
+  /* lift sutil no hover (transform → sem reflow de layout) */
+  .btn-new:hover,.btn-export:hover,.btn-add-zona:hover,.btn-loc:hover,.btn-take:hover,.btn-fin:hover,
+  .btn-primary:hover,.btn-ok:hover,.btn-warn:hover{transform:translateY(-1.5px);box-shadow:var(--hover-lift);}
+  /* press: afunda e encolhe (tátil) */
+  .btn:active,.tab:active,.btn-new:active,.btn-export:active,.btn-add-zona:active,.btn-loc:active,.btn-take:active,.btn-fin:active,.zona-del:active,.fc-btn:active,.alert-flag:active{transform:translateY(1px) scale(.96);}
+  .tab:not(.active):active{transform:scale(.96);}
+  /* foco visível p/ teclado (acessibilidade) */
+  .btn:focus-visible,.tab:focus-visible,.btn-new:focus-visible,.btn-export:focus-visible,.btn-add-zona:focus-visible,.btn-loc:focus-visible,.btn-take:focus-visible,.btn-fin:focus-visible,.zona-del:focus-visible,.fc-btn:focus-visible,.alert-flag:focus-visible,.switch:focus-visible,#newConvBtn:focus-visible{outline:2px solid var(--primary);outline-offset:2px;border-radius:8px;}
+  /* toggle: deslize springy + squish no clique */
+  .switch{cursor:pointer;}
+  .switch::after{transition:left .3s var(--spring),width .15s var(--ease) !important;}
+  .switch:active::after{width:25px;}
+  .switch.on:active::after{left:18px;}
+  /* sliders: trilho nativo (accent-color) + thumb com cursor de arraste */
+  .zona-raio input[type=range]{height:18px;cursor:grab;}
+  .zona-raio input[type=range]:active{cursor:grabbing;}
+  /* entrada suave de elementos */
+  @keyframes riseIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;}}
+  .order-row,.zona-row,.area-row{animation:riseIn .26s var(--ease-out) both;}
+  @media (prefers-reduced-motion:reduce){
+    .btn,.tab,.btn-new,.btn-export,.btn-add-zona,.btn-loc,.btn-take,.btn-fin,.zona-del,.fc-btn,.alert-flag,.moto-btn,.switch::after{transition:background .18s,color .18s,filter .18s !important;}
+    .btn-new:hover,.btn-export:hover,.btn-add-zona:hover,.btn-loc:hover,.btn-take:hover,.btn-fin:hover,.btn-primary:hover,.moto-btn:hover,
+    .btn:active,.tab:active,.btn-new:active,.btn-export:active,.btn-add-zona:active,.btn-loc:active,.btn-take:active,.btn-fin:active,.zona-del:active,.fc-btn:active,.alert-flag:active,.moto-btn:active{transform:none !important;}
+    .order-row,.zona-row,.area-row{animation:none !important;}
+  }
+</style>
+</head>
+<body>
+
+  <header class="topbar">
+    <div class="logo" aria-hidden="true"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 11h17"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M9 6c-.7-.9-.7-1.8 0-2.7"/><path d="M12 6c-.7-.9-.7-1.8 0-2.7"/><path d="M15 6c-.7-.9-.7-1.8 0-2.7"/></svg></div>
+    <div><div class="title">Robô de Marmitex</div><div class="subtitle" id="topSub">Painel do dono</div></div>
+    <span class="pill"><span class="dot"></span> Robô ativo</span>
+  </header>
+
+  <main class="stage">
+    <div class="panel" aria-label="Painel do dono">
+      <div class="tabs">
+        <button class="tab active" id="tabAtBtn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Atendimento</button>
+        <button class="tab" id="tabPedBtn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg> Pedidos</button>
+        <button class="tab" id="tabMapBtn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg> Mapas</button>
+        <button class="tab" id="tabCfgBtn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> Configuração</button>
+      </div>
+
+      <!-- ===== ATENDIMENTO ===== -->
+      <div id="tabAt" style="display:flex;flex-direction:column;gap:18px;">
+        <div class="kpis">
+          <div class="kpi"><div class="label"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="#4F46E5" stroke-width="2" stroke-linecap="round"><path d="M3 3v18h18"/><path d="M7 14l3-3 3 3 4-5"/></svg> Pedidos hoje</div><div class="value" id="kpiOrders">0</div></div>
+          <div class="kpi"><div class="label"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="#16A34A" stroke-width="2" stroke-linecap="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg> Faturamento</div><div class="value"><small>R$</small> <span id="kpiRevenue">0,00</span></div></div>
+          <div class="kpi"><div class="label"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="#EA580C" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> Ticket médio</div><div class="value"><small>R$</small> <span id="kpiTicket">0,00</span></div></div>
+        </div>
+
+        <div class="card" id="inboxCard">
+          <div class="card-h"><div class="ico-box" style="background:#DCFCE7"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="#16A34A" stroke-width="2" stroke-linecap="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8z"/></svg></div><h3>Conversas</h3><button class="btn-export" id="exportChatsBtn" title="Baixar todas as conversas (.json) para análise"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Exportar</button><button class="btn-new" id="newConvBtn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Nova</button></div>
+          <div class="inbox" id="inbox"></div>
+        </div>
+
+        <div class="card waiting-card" id="waitingState" style="display:none">
+          <div>
+            <div class="waiting-ico" aria-hidden="true"><svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16l-1.5 14.5a2 2 0 0 1-2 1.8H7.5a2 2 0 0 1-2-1.8L4 4z"/><path d="M3 4h18"/><path d="M9 9h6"/><path d="M9.5 13h5"/></svg></div>
+            <h3>Esperando pedido</h3>
+            <p>Nenhuma conversa em andamento. Toque em <b>Nova</b> para iniciar um atendimento.</p>
+            <span class="waiting-badge"><span class="dot"></span> Robô online, aguardando</span>
+          </div>
+        </div>
+
+        <div id="detail" class="two-col">
+          <!-- pedido -->
+          <div class="card">
+            <div class="card-h"><div class="ico-box" style="background:var(--brand-soft)"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="#EA580C" stroke-width="2" stroke-linecap="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg></div><h3>Pedido</h3><span class="step-badge" id="stepBadge">—</span></div>
+            <div class="card-b">
+              <div class="conv-top"><div class="conv-av" id="convAv">--</div><div style="flex:1"><div class="conv-name" id="convName">Cliente</div><div class="conv-phone" id="convPhone">—</div></div></div>
+              <div class="order-list" id="orderList"></div>
+              <div class="order-foot">
+                <div class="info-line pending" id="addrLine"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg> <span>Endereço: aguardando</span></div>
+                <div class="info-line pending" id="payLine"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg> <span>Pagamento: aguardando</span></div>
+                <div id="payStatus"></div>
+                <div class="total-line"><span class="lbl">Total do pedido</span><span class="val">R$ <span id="orderTotal">0,00</span></span></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- conversa (real-time; WhatsApp depois) -->
+          <div class="card conversa-card">
+            <div class="card-h"><div class="ico-box" style="background:var(--primary-soft)"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="#4F46E5" stroke-width="2" stroke-linecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div><div style="flex:1"><h3>Conversa</h3><div class="sub" id="convSub">tempo real · WhatsApp</div></div><button class="alert-flag" id="alertFlag" title="Cliente quer atendente — sinalizar chat" style="display:none"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg></button><button class="btn-take" id="takeBtn">Assumir</button></div>
+            <div class="conv-msgs" id="convMsgs"></div>
+            <div class="conv-foot">
+              <div class="conv-mode" id="convMode"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/></svg> <span id="convModeTxt">Mensagem do cliente (teste). Com o WhatsApp, chega automático.</span></div>
+              <div class="conv-input-row" id="convInputRow">
+                <input id="convInput" type="text" placeholder="Mensagem do cliente…" autocomplete="off" />
+                <button class="conv-send" id="convSend" aria-label="Enviar"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M2 21l21-9L2 3v7l15 2-15 2v7z"/></svg></button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== PEDIDOS ===== -->
+      <div id="tabPed" style="display:none;flex-direction:column;gap:16px;">
+        <div class="panel-head" style="display:flex;align-items:center;gap:10px;">
+          <div><h2>Pedidos confirmados</h2><p>Cada pedido em um card · confirme a saída do motoboy</p></div>
+          <span class="step-badge" id="pedCount" style="margin-left:auto;background:var(--ok-soft);color:var(--ok)">0</span>
+          <button class="btn-fin" id="limparBtn" title="Remove da lista os pedidos finalizados (motoboy a caminho)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg> Limpar</button>
+        </div>
+        <div id="pedList" style="display:flex;flex-direction:column;gap:14px;"></div>
+      </div>
+
+      <!-- ===== MAPAS (zonas de entrega) ===== -->
+      <div id="tabMap" style="display:none;flex-direction:column;gap:16px;">
+        <div class="panel-head" style="display:flex;align-items:center;gap:10px;">
+          <div><h2>Zonas de entrega</h2><p>Defina até onde o motoboy vai (malha de trabalho) e as taxas por região dentro dela</p></div>
+        </div>
+        <div class="card">
+          <div class="toggle-row" style="margin-bottom:14px">
+            <div class="tt"><div class="h">Entrega dinâmica por região</div><div class="s">Ligado: a taxa é definida pela zona do mapa onde o endereço do cliente cai. Desligado: usa a taxa única da Configuração (mapa desativado).</div></div>
+            <div class="switch blue" id="dynSwitch"></div>
+          </div>
+          <div class="field" style="margin-bottom:0">
+            <label>Endereço do restaurante</label>
+            <div class="addr-set"><input id="lojaEndereco" placeholder="Rua, número, bairro, cidade" /><button class="btn-loc" id="lojaLocBtn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg> Localizar</button></div>
+            <div class="loc-status" id="lojaLocStatus"></div>
+          </div>
+        </div>
+        <div class="card" style="overflow:hidden"><div id="mapaLeaflet"></div></div>
+
+        <!-- controlador prático (editar a malha selecionada) -->
+        <div class="card mesh-ctrl" id="meshCtrl">
+          <div class="mesh-ctrl-head"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg><b>Editar no mapa</b><span class="mesh-hint">toque num círculo do mapa ou escolha abaixo</span></div>
+          <div class="mesh-chips" id="meshChips"></div>
+          <div class="mesh-editor" id="meshEditor">
+            <div class="mesh-ed-name"><span class="mesh-ed-dot" id="meshEdDot"></span><span id="meshEdName">—</span><span class="mesh-ed-type" id="meshEdType"></span></div>
+            <div class="mesh-radius">
+              <button class="mesh-step" id="meshMinus" aria-label="Diminuir" title="Diminuir">−</button>
+              <input type="range" id="meshRange" min="200" max="30000" step="100" />
+              <button class="mesh-step" id="meshPlus" aria-label="Aumentar" title="Aumentar">+</button>
+              <span class="mesh-km" id="meshKm">—</span>
+            </div>
+            <div class="mesh-ed-actions">
+              <div class="mesh-fee" id="meshFeeWrap"><label>Taxa R$</label><input type="number" id="meshFee" min="0" step="0.5" /></div>
+              <button class="mesh-act" id="meshCenter"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg> Centralizar</button>
+              <button class="mesh-act danger" id="meshDel"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg> Remover</button>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-h"><div class="ico-box" style="background:#E2E8F0"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="#334155" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></div><h3>Malha de trabalho</h3><span class="step-badge" id="areaCount" style="background:#E2E8F0;color:#334155;margin-left:0">0</span><button class="btn-add-zona slate" id="addAreaBtn" style="margin-left:auto"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg> Adicionar área</button></div>
+          <p class="card-hint">Áreas onde o motoboy entrega. Fora delas, o robô avisa o cliente que não entrega. As taxas abaixo valem <b>dentro</b> destas áreas.</p>
+          <div id="areaList"></div>
+        </div>
+        <div class="card">
+          <div class="card-h"><div class="ico-box" style="background:var(--primary-soft)"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="#4F46E5" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/></svg></div><h3>Malha de taxas</h3><span class="step-badge" id="zonaCount" style="background:var(--primary-soft);color:var(--primary);margin-left:0">0</span><button class="btn-add-zona" id="addZonaBtn" style="margin-left:auto"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg> Adicionar zona</button></div>
+          <p class="card-hint">Cada zona fica <b>limitada à malha de trabalho</b>: o raio não ultrapassa a área que a contém. Zona com o centro fora da malha aparece em vermelho.</p>
+          <div id="zonaList"></div>
+        </div>
+      </div>
+
+      <!-- ===== CONFIGURAÇÃO ===== -->
+      <div id="tabCfg" style="display:none;flex-direction:column;gap:18px;">
+        <div class="card">
+          <div class="card-h"><div class="ico-box" style="background:var(--brand-soft)"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="#EA580C" stroke-width="2" stroke-linecap="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></svg></div><h3>Dados do restaurante</h3></div>
+          <div class="card-b">
+            <div class="field"><label>Nome do restaurante</label><input id="cfgNome" /></div>
+            <div class="field"><label>Chave Pix</label><input id="cfgPix" /></div>
+            <div class="grid2">
+              <div class="field"><label>Horário de funcionamento</label><input id="cfgHorario" /></div>
+              <div class="field"><label>Tempo de entrega</label><input id="cfgTempo" placeholder="ex.: 40 min" /></div>
+            </div>
+            <div class="toggle-row"><div class="tt"><div class="h">Entrega grátis</div><div class="s">Quando ativo, a taxa de entrega fica R$ 0,00.</div></div><div class="switch" id="cfgGratis"></div></div>
+            <div class="field"><label>Taxa de entrega (R$)</label><input id="cfgTaxa" type="number" min="0" step="0.5" /></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-h"><div class="ico-box" style="background:var(--ok-soft)"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="#16A34A" stroke-width="2" stroke-linecap="round"><path d="M3 2v7c0 1.1.9 2 2 2a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3zm0 0v7"/></svg></div><h3>Cardápio</h3><span class="step-badge" id="menuCount" style="background:var(--ok-soft);color:var(--ok)">0 itens</span></div>
+          <div class="card-b">
+            <div class="note-box" style="margin-bottom:16px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex:none;margin-top:1px"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg><span>Etiquetas diferenciam tamanho/tipo: marmitas <b>P · M · G</b>, bebidas <b>lata · 600 · 2L</b>. As <b>palavras-chave</b> são o que o robô entende quando o cliente escreve.</span></div>
+
+            <div class="cfg-sub"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg> Marmitas</div>
+            <div class="menu-head"><span>Prato</span><span>Preço</span><span>Etiqueta</span><span>Palavras-chave</span><span></span></div>
+            <div id="menuRowsMarmita"></div>
+            <button class="btn-add" id="addMarmitaBtn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Adicionar marmita</button>
+
+            <div class="cfg-sub beb"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 2h8l-1 6H9z"/><path d="M9 8c-1 4-1 8-1 11a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1c0-3 0-7-1-11"/></svg> Bebidas</div>
+            <div class="menu-head"><span>Bebida</span><span>Preço</span><span>Etiqueta</span><span>Palavras-chave</span><span></span></div>
+            <div id="menuRowsBebida"></div>
+            <button class="btn-add" id="addBebidaBtn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Adicionar bebida</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-h"><div class="ico-box" style="background:var(--primary-soft)"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="#4F46E5" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg></div><div><h3>Peculiaridades</h3><div class="sub">o que a IA "sabe" sobre este restaurante</div></div></div>
+          <div class="card-b">
+            <div id="pecRows"></div>
+            <button class="btn-add" id="addPecBtn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Adicionar regra</button>
+            <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--line)">
+              <label style="display:block;font-size:12px;font-weight:700;color:var(--muted);margin-bottom:8px">Ensinar o robô (vira uma peculiaridade)</label>
+              <div class="teach"><input id="teachInput" placeholder='Ex.: "A marmita G acompanha 2 acompanhamentos"' /><button class="btn-soft" id="teachBtn" style="padding:10px 14px;border-radius:var(--r-sm)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg> Ensinar</button></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-h"><div class="ico-box" style="background:#1E293B"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="#FBBF24" stroke-width="2" stroke-linecap="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg></div><div><h3>Contexto que a IA recebe</h3><div class="sub">prévia do conhecimento</div></div></div>
+          <div class="card-b"><div class="ai-preview" id="aiPreview"></div></div>
+        </div>
+
+        <div class="save-bar">
+          <div class="st" id="saveSt">Tudo salvo.</div>
+          <button class="btn btn-ghost" id="discardBtn">Descartar</button>
+          <button class="btn btn-primary" id="saveBtn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Salvar Configurações</button>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <div class="toast" id="toast"></div>
+
+  <div class="flag-card" id="flagCard">
+    <div class="flag-card-top">
+      <div class="flag-card-ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg></div>
+      <div class="flag-card-body"><div class="flag-card-name" id="flagCardName">Cliente</div><div class="flag-card-msg" id="flagCardMsg">Pediu para falar com um atendente.</div></div>
+      <button class="flag-card-x" id="flagCardX" title="Fechar">&times;</button>
+    </div>
+    <div class="flag-card-q">Sinalizar esta conversa para análise e aprendizado?</div>
+    <div class="flag-card-actions">
+      <button class="fc-btn fc-go" id="flagGoBtn">Abrir chat</button>
+      <button class="fc-btn fc-sig" id="flagSigBtn">Sinalizar</button>
+    </div>
+  </div>
+
+  <div class="block-overlay" id="blockOverlay">
+    <div class="block-card">
+      <div class="block-ico"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>
+      <h2>Robô bloqueado</h2>
+      <p>O acesso deste restaurante ao robô está suspenso. Entre em contato com o suporte para regularizar e reativar o atendimento.</p>
+      <span class="block-tag">Atendimento pausado pelo painel do criador</span>
+    </div>
+  </div>
+
+<script>
+/* =========================================================
+   ROBÔ DE MARMITEX — v5
+   - Etiquetas P/M/G como categorias dos pratos
+   - Entrega grátis (toggle) + taxa
+   - Configuração com "Salvar" (persiste só ao salvar)
+   - Chat lateral removido; "Conversa" no painel (tempo real)
+   - Parser tolerante a erros de digitação (busca aproximada)
+   ========================================================= */
+const STORE='marmitex_db_v1';
+const ETQ={marmita:['P','M','G'],bebida:['lata','600','2L']};
+const etqOptions=tipo=>ETQ[tipo]||ETQ.marmita;
+function defaultDB(){return{restaurant:{
+  nome:'Marmitaria Sabor Caseiro', pixKey:'marmitaria@sabor.com', horario:'11h–15h e 18h–22h',
+  taxaEntrega:5, entregaGratis:false, tempoEntrega:'40 min',
+  mapa:{lat:-23.5614,lng:-46.6559,zoom:13,entregaDinamica:true,endereco:'Avenida Paulista, 1578, São Paulo',
+    areas:[{id:1,lat:-23.5614,lng:-46.6559,raio:5000,nome:'Área de cobertura'}],
+    zonas:[
+    {id:1,lat:-23.5614,lng:-46.6559,raio:1500,taxa:5,cor:'#4F46E5'},
+    {id:2,lat:-23.5614,lng:-46.6559,raio:3200,taxa:9,cor:'#16A34A'},
+  ]},
+  cardapio:[
+    {id:1,nome:'Marmita de Frango',preco:18,tipo:'marmita',etiqueta:'M',palavras:'frango, file de frango, frango grelhado'},
+    {id:2,nome:'Marmita de Carne',preco:20,tipo:'marmita',etiqueta:'G',palavras:'carne, bife, bife acebolado'},
+    {id:3,nome:'Marmita Fitness',preco:22,tipo:'marmita',etiqueta:'P',palavras:'fitness, fit, saudavel, saudável'},
+    {id:4,nome:'Pepsi',preco:6,tipo:'bebida',etiqueta:'lata',palavras:'pepsi, pepsii, pepsi cola, refri'},
+    {id:5,nome:'Coca-Cola',preco:7,tipo:'bebida',etiqueta:'lata',palavras:'coca, coca-cola, coca cola, cocacola, refri'},
+    {id:6,nome:'Guaraná',preco:6,tipo:'bebida',etiqueta:'lata',palavras:'guarana, guaraná, guara, refri'},
+  ],
+  peculiaridades:[
+    'A Marmita Fitness (etiqueta P) não leva arroz branco por padrão.',
+    'Não trabalhamos com opções veganas no momento.',
+  ],
+}};}
+let DB; try{DB=JSON.parse(localStorage.getItem(STORE))||defaultDB();}catch(e){DB=defaultDB();}
+// migração leve: garante campos novos em dados antigos
+(function migrate(){const r=DB.restaurant;if(r.entregaGratis===undefined)r.entregaGratis=(+r.taxaEntrega===0);if(r.tempoEntrega===undefined)r.tempoEntrega='40 min';if(!r.mapa)r.mapa={lat:-23.5614,lng:-46.6559,zoom:13,zonas:[{id:1,lat:-23.5614,lng:-46.6559,raio:1500,taxa:5,cor:'#4F46E5'},{id:2,lat:-23.5614,lng:-46.6559,raio:3200,taxa:9,cor:'#16A34A'}]};if(r.mapa.entregaDinamica===undefined)r.mapa.entregaDinamica=true;if(r.mapa.endereco===undefined)r.mapa.endereco='';if(!r.mapa.areas)r.mapa.areas=[{id:1,lat:r.mapa.lat,lng:r.mapa.lng,raio:5000,nome:'Área de cobertura'}];r.cardapio.forEach(i=>{if(i.etiqueta===undefined)i.etiqueta='';if(i.tipo===undefined){i.tipo=/refri|refrigerante|coca|pepsi|guaran|suco|bebida|\blata\b|água|agua|\b2l\b|600/.test(((i.nome||'')+' '+(i.palavras||'')).toLowerCase())?'bebida':'marmita';}});})();
+let _seq=Math.max(0,...DB.restaurant.cardapio.map(i=>i.id));
+const R=()=>DB.restaurant;
+const saveDB=()=>{try{localStorage.setItem(STORE,JSON.stringify(DB));}catch(e){}};
+
+const $=s=>document.querySelector(s);
+const brl=v=>(+v).toFixed(2).replace('.',',');
+const now=()=>new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+const esc=s=>(s+'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const escRe=s=>s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),2200);}
+
+/* ---------- parser tolerante a erros ---------- */
+function lev(a,b){const m=a.length,n=b.length;if(!m)return n;if(!n)return m;let prev=Array.from({length:n+1},(_,i)=>i);for(let i=1;i<=m;i++){const cur=[i];for(let j=1;j<=n;j++)cur[j]=Math.min(prev[j]+1,cur[j-1]+1,prev[j-1]+(a[i-1]===b[j-1]?0:1));prev=cur;}return prev[n];}
+const kwsOf=it=>(it.palavras||'').toLowerCase().split(',').map(s=>s.trim()).filter(Boolean);
+function matchItem(chunk){
+  // 1) exato: nome ou palavra-chave (sigla curta = exata; termo maior = prefixo)
+  for(const it of R().cardapio){
+    if(it.nome&&chunk.includes(it.nome.toLowerCase()))return it;
+    for(const k of kwsOf(it)){const re=k.length<=2?new RegExp('\\b'+escRe(k)+'\\b'):new RegExp('\\b'+escRe(k));if(re.test(chunk))return it;}
+  }
+  // 1b) por ETIQUETA (P/M/G/lata/600/2L) — ex.: "a g custa quanto?", "quero a marmita G"
+  const etqM=chunk.match(/\b(p|m|g|lata|600|350|310|2l)\b/);
+  if(etqM){
+    const etq=etqM[1];
+    let cand=R().cardapio.filter(it=>String(it.etiqueta||'').toLowerCase()===etq);
+    if(/marmit/.test(chunk))cand=cand.filter(it=>(it.tipo||'marmita')==='marmita');
+    else if(/bebida|refri|coca|pepsi|guaran/.test(chunk))cand=cand.filter(it=>it.tipo==='bebida');
+    if(cand.length===1)return cand[0]; // só casa se a etiqueta identificar UM produto (sem ambiguidade)
+  }
+  // 2) aproximado: tolera erro de digitação (ex.: pepessi ~ pepessii)
+  const tokens=chunk.split(/\s+/).filter(w=>w.length>=4);
+  let best=null,bestD=99;
+  for(const it of R().cardapio){
+    const terms=[...kwsOf(it),...((it.nome||'').toLowerCase().split(/\s+/))].filter(t=>t.length>=4);
+    for(const t of terms)for(const w of tokens){const d=lev(w,t);const thr=t.length>=5?2:1;if(d<=thr&&d<bestD){bestD=d;best=it;}}
+  }
+  return best;
+}
+const NUM={um:1,uma:1,dois:2,duas:2,tres:3,'três':3,quatro:4,cinco:5,seis:6,sete:7,oito:8,nove:9,dez:10};
+function parseQty(c){
+  // ignora características de volume/tamanho pra não virar quantidade ("coca 600", "350ml", "2 litros", "2l")
+  const limpo=c.replace(/\b\d{1,4}\s*ml\b/gi,' ').replace(/\b\d{1,2}\s*l(itros?)?\b/gi,' ').replace(/\b\d{3,4}\b/g,' ');
+  const d=limpo.match(/\b(\d{1,2})\b/);
+  if(d)return Math.max(1,parseInt(d[1]));
+  for(const w in NUM){if(new RegExp('\\b'+w+'\\b').test(limpo))return NUM[w];}
+  return 1;
+}
+function parseNote(c){const tr=['sem ','com ','bem ','mal ','pouco ','muito ','extra ','capricha','no ponto','ao ponto','bem passad','mal passad'];let idx=-1;for(const t of tr){const i=c.indexOf(t);if(i>=0&&(idx<0||i<idx))idx=i;}return idx>=0?c.slice(idx).trim():null;}
+function parseOrder(text){const t=text.toLowerCase();const chunks=t.split(/\s+e\s+|,|\+|\/|\bmais\b/);const out=[];for(let c of chunks){c=c.trim();if(!c)continue;const it=matchItem(c);if(!it)continue;out.push({id:it.id,nome:it.nome,preco:it.preco,etiqueta:it.etiqueta,qtd:parseQty(c),note:parseNote(c)});}return out;}
+const describe=items=>items.map(i=>`• ${i.qtd}× ${i.nome}${i.note?' ('+i.note+')':''}`).join('\n');
+
+/* ---------- conversas ---------- */
+const CLIENTES=[['Maria Silva','MS'],['João Pereira','JP'],['Ana Costa','AC'],['Carlos Souza','CS'],['Beatriz Lima','BL'],['Rafael Alves','RA'],['Lucas Rocha','LR'],['Paula Dias','PD']];
+let convs=[],currentId=null,cseq=0;
+const totals={pedidos:0,faturamento:0};
+const cur=()=>convs.find(c=>c.id===currentId)||null;
+function buildBubble(who,text,time){
+  let tag='';
+  if(who==='bot')tag='<span class="tag"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="9" width="16" height="11" rx="2"/><circle cx="12" cy="4" r="2"/></svg>IA</span>';
+  if(who==='agent')tag='<span class="tag"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="8" r="4"/><path d="M4 20a8 8 0 0 1 16 0z"/></svg>Atendente</span>';
+  return `<div class="msg ${who}">${tag}${esc(text).replace(/\n/g,'<br>')}<span class="t">${time||now()}</span></div>`;
+}
+function newConv(seed){const[n,i]=CLIENTES[Math.floor(Math.random()*CLIENTES.length)];const tel=`(11) 9${Math.floor(1000+Math.random()*8999)}-${Math.floor(1000+Math.random()*8999)}`;const c=Object.assign({id:++cseq,nome:n,ini:i,phone:tel,step:'menu',cart:[],endereco:null,pagamento:null,pagStatus:null,humano:false,typing:false,messages:[],unread:0,lastAt:Date.now()},seed||{});convs.push(c);return c;}
+function pushMsg(c,who,text){c.messages.push({who,text,time:now()});c.lastAt=Date.now();if(c.id!==currentId&&who!=='cust')c.unread++;renderInbox();if(c.id===currentId){renderConversa();}if(typeof salvarChatsLog==='function')salvarChatsLog();}
+function botSay(c,text,delay=650){c.typing=true;if(c.id===currentId)renderConversa();setTimeout(()=>{c.typing=false;pushMsg(c,'bot',text);},delay);}
+
+/* ---------- pagamento ---------- */
+const PAGINFO={
+  aguardando:['Aguardando pagamento','warn','M12 8v4l2 2 M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20'],
+  comprovante:['Comprovante recebido — confirmar','primary','M9 11l3 3L22 4 M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11'],
+  confirmado:['Pagamento confirmado','ok','M20 6 9 17l-5-5'],
+  na_entrega:['Pagamento na entrega','slate','M1 3h15v13H1z M16 8h4l3 3v5h-7'],
+};
+const addItems=(c,items)=>items.forEach(ni=>{const s=c.cart.find(i=>i.id===ni.id&&(i.note||'')===(ni.note||''));if(s)s.qtd+=ni.qtd;else c.cart.push({...ni});});
+const orderTotal=c=>c.cart.reduce((s,i)=>s+i.preco*i.qtd,0);
+const taxa=(c)=>{if(R().entregaGratis)return 0;if(c&&c.zonaTaxa!=null)return c.zonaTaxa;return (+R().taxaEntrega||0);};
+// entrega dinâmica ligada, com zonas, mas ainda sem endereço resolvido → taxa só após o endereço
+const entregaPendente=c=>{if(R().entregaGratis||!c)return false;const m=mapaCfg();return !!m.entregaDinamica&&m.zonas.length>0&&c.zonaTaxa==null&&!c.endereco;};
+const linhaEntrega=c=>{if(R().entregaGratis)return 'Entrega: grátis';if(entregaPendente(c))return 'Entrega: a calcular pelo endereço 📍';const tx=taxa(c);return tx>0?'Entrega: R$ '+brl(tx):'Entrega: grátis';};
+// bloco "Total" do carrinho, respeitando entrega ainda não calculada
+function blocoTotal(c){const sub=orderTotal(c);if(entregaPendente(c))return `*Subtotal: R$ ${brl(sub)}* _(+ entrega conforme o endereço)_`;return `*Total: R$ ${brl(sub+taxa(c))}*`;}
+
+/* ---------- fluxo ---------- */
+const menuTxt=()=>'Cardápio de hoje 🍽️\n'+R().cardapio.map(i=>`• ${i.nome}${i.etiqueta?' ('+i.etiqueta+')':''} — R$ ${brl(i.preco)}`).join('\n')+'\n\nÉ só me dizer o que quer.';
+const menuShort=()=>R().cardapio.map(i=>i.nome).join(', ');
+function greet(c){c.step='menu';botSay(c,`Olá! 👋 Sou o robô da *${R().nome}*.\nÉ só me dizer seu pedido ou escolher:\n\n*1* — Ver cardápio\n*2* — Fazer pedido\n*3* — Falar com atendente`,500);}
+const opcoes=()=>'*1* — Ver cardápio\n*2* — Fazer pedido\n*3* — Falar com atendente';
+function confirmItems(c,items){c.step='mais';botSay(c,'Anotado! ✅\n'+describe(items)+'\n\nDeseja adicionar mais alguma coisa? (sim / não)',650);}
+function askAddress(c){c.step='endereco';botSay(c,'Perfeito! 📍 Qual o *endereço de entrega*? (rua, número e bairro)',600);}
+function askPayment(c){c.step='pagamento';botSay(c,'Por último, *como prefere pagar*?\n\n*1* — Pix\n*2* — Dinheiro\n*3* — Cartão',600);}
+function placeOrder(c){totals.pedidos++;totals.faturamento+=orderTotal(c)+taxa(c);updateKPIs();}
+// aplica a forma de pagamento já interpretada (Pix/Dinheiro/Cartão na entrega)
+function aplicarPagamento(c,pg){
+  const st=(pg==='Pix')?'aguardando':'na_entrega';
+  c.pagamento=pg;c.pagStatus=st;placeOrder(c);
+  const tx=taxa(c);const total=orderTotal(c)+tx;const zlbl=(c.zonaNome&&!R().entregaGratis)?` (${c.zonaNome})`:'';const linha=tx>0?`\nEntrega: R$ ${brl(tx)}${zlbl}`:'\nEntrega: grátis 🎉';
+  if(st==='aguardando'){c.step='comprovante';botSay(c,`Pedido registrado! ✅${linha}\n*Total: R$ ${brl(total)}*\n\nChave Pix: *${R().pixKey}*\nDepois de pagar, me envie o *comprovante* 🧾`,650);}
+  else{c.step='concluido';botSay(c,`Pedido confirmado! 🎉${linha}\n*Total: R$ ${brl(total)}* — *${pg}*\nTempo estimado: ${R().tempoEntrega||'40 min'}. Obrigado! 😄`,700);}
+  renderOrder();renderInbox();
+}
+/* ---------- venda consultiva / contexto ---------- */
+const BEBIDA_RE=/refri|refrigerante|coca|pepsi|guaran|suco|bebida|lata|água|agua/;
+const isBebida=it=>BEBIDA_RE.test(((it.nome||'')+' '+(it.palavras||'')).toLowerCase());
+const bebidasDisp=()=>R().cardapio.filter(isBebida).map(i=>i.nome);
+function findProduct(text,c){
+  const v=text.toLowerCase();
+  if(/\b(ela|ele|isso|essa|esse|dela|dele|desse|dessa|disso|a mesma|o mesmo|mesma|mesmo)\b/.test(v)&&c.lastProduct){return R().cardapio.find(i=>i.id===c.lastProduct.id)||c.lastProduct;}
+  return matchItem(v);
+}
+function handoff(c){botSay(c,'Sem problema! 🙋 Já estou chamando um atendente humano pra te ajudar. Um instante…',500);alertarAtendente(c,'atendente');}
+// sinaliza que o cliente precisa de um humano → alerta vermelho + card flutuante + log
+function alertarAtendente(c,motivo){
+  c.querAtendente=true;c.alertMotivo=motivo;c.alertAt=Date.now();
+  renderInbox();if(c.id===currentId)renderConversa();
+  salvarChatsLog();
+  showFlagCard(c);
+}
+function showCart(c){
+  if(!c.cart.length){botSay(c,'Seu pedido ainda está vazio 🙂. O que vai querer? Temos: '+menuShort(),550);return;}
+  botSay(c,'Seu pedido até agora:\n'+describe(c.cart)+`\n${linhaEntrega(c)}\n${blocoTotal(c)}\n\nDeseja mais alguma coisa ou finalizar?`,600);
+  if(c.step==='menu')c.step='pedido';
+}
+function responderPreco(c,p,text){
+  if(!p){botSay(c,`Hmm, não encontrei esse item no cardápio 😕.\n${opcoes()}`,600);return;}
+  c.lastProduct=p;c.pendingAdd=p;
+  const dispo=/\btem\b|dispon|voc[eê]s? tem|vcs tem/.test((text||'').toLowerCase());
+  botSay(c,`${dispo?'Temos sim! ':''}A *${p.nome}* custa *R$ ${brl(p.preco)}*.\nDeseja adicionar ao seu pedido? (sim / não)`,600);
+}
+// só finaliza com carrinho não-vazio + intenção clara (REGRA CRÍTICA)
+function tentarFinalizar(c){
+  if(c.cart.length){revisarPedido(c);}
+  else{if(c.step==='menu')c.step='pedido';botSay(c,'Seu carrinho ainda está vazio 🙂. O que vai querer?\n'+opcoes(),500);}
+}
+// antes de fechar: revisa o pedido e pergunta se quer adicionar/remover algo
+function revisarPedido(c){
+  c.step='revisao';
+  botSay(c,'📋 *Revisão do seu pedido:*\n'+describe(c.cart)+`\n${linhaEntrega(c)}\n${blocoTotal(c)}\n\nQuer *adicionar* ou *remover* algo? Se estiver tudo certo, é só dizer *confirmar* que eu sigo pro endereço. 😊`,650);
+}
+function confirmAndSuggest(c,items){
+  if(c.step==='menu')c.step='pedido';
+  let msg='Anotado! ✅\n'+describe(items);
+  const temMarmita=items.some(i=>!isBebida(i));
+  const temBebida=c.cart.some(isBebida);
+  if(temMarmita&&!temBebida&&!c.suggested){const b=bebidasDisp();if(b.length){msg+=`\n\n🥤 Quer uma bebida pra acompanhar? Tem ${b.join(', ')}.`;c.suggested=true;}}
+  msg+='\n\nPosso anotar mais alguma coisa, ou já deseja *finalizar* o pedido? 😊';
+  botSay(c,msg,650);
+}
+
+/* ===== Ações do backend (executam efeito + resposta) ===== */
+function responderEntrega(c){const tx=taxa(c);botSay(c,tx>0?`Sim, entregamos! 🛵 A taxa de entrega é *R$ ${brl(tx)}*.\nQuer fazer um pedido? É só me dizer o que deseja 😊`:`Sim, entregamos e a *entrega é grátis*! 🛵🎉\nQuer fazer um pedido? É só me dizer o que deseja 😊`,500);}
+function removerItem(c,p){
+  if(p){const idx=c.cart.findIndex(i=>i.id===p.id);if(idx>=0){const nome=c.cart[idx].nome;if(c.cart[idx].qtd>1)c.cart[idx].qtd--;else c.cart.splice(idx,1);renderOrder();renderInbox();botSay(c,`Removi *${nome}* do pedido. ✅\nDeseja mais alguma coisa ou finalizar?`,550);return;}}
+  botSay(c,'Não achei esse item no seu pedido 🤔. Quer que eu mostre o que já está anotado?',550);
+}
+function trocarItem(c,de,para){
+  if(de&&para){const idx=c.cart.findIndex(i=>i.id===de.id);if(idx>=0){if(c.cart[idx].qtd>1)c.cart[idx].qtd--;else c.cart.splice(idx,1);}addItems(c,[{id:para.id,nome:para.nome,preco:para.preco,etiqueta:para.etiqueta,qtd:1,note:null}]);c.lastProduct=para;renderOrder();renderInbox();if(c.step==='menu')c.step='pedido';botSay(c,`Feito! Troquei *${de.nome}* por *${para.nome}*. ✅\nDeseja mais alguma coisa?`,600);return;}
+  botSay(c,'Não consegui identificar os itens da troca 😕.\nDeseja falar com um atendente? Digite *3*.',600);
+}
+function corrigirPedido(c,novos){
+  if(c.cart.length)c.cart.pop(); // substitui o último item — nunca duplica
+  addItems(c,novos);c.lastProduct=novos[novos.length-1];renderOrder();renderInbox();if(c.step==='menu')c.step='pedido';
+  botSay(c,`Corrigido! ✅ Agora é:\n${describe(novos)}\n\nMais alguma coisa ou *finalizar*?`,600);
+}
+function adicionarNoFluxo(c,itens){
+  addItems(c,itens);c.lastProduct=itens[itens.length-1];renderOrder();renderInbox();
+  if(c.step==='endereco')botSay(c,'Adicionei ✅\n'+describe(itens)+'\nVoltando: qual o *endereço de entrega*?',600);
+  else if(c.step==='pagamento')botSay(c,'Adicionei ✅\n'+describe(itens)+'\n*Como prefere pagar?* 1 Pix · 2 Dinheiro · 3 Cartão',600);
+  else if(c.step==='comprovante')botSay(c,'Adicionei ✅\n'+describe(itens)+'\nMe avise quando enviar o comprovante 🧾',600);
+  else confirmAndSuggest(c,itens);
+}
+const saudar=c=>botSay(c,`Olá! 👋 Seja bem-vindo(a) à *${R().nome}*! 😊\nÉ só me dizer seu pedido (ex.: "uma marmita de frango") ou escolher:\n${opcoes()}`,500);
+
+/* ===== CAMADA "IA": só INTERPRETA a mensagem → devolve a intenção (sem efeitos, não decide o fluxo) ===== */
+const RE_SAUDACAO=/^\s*(oi+|ol[aá]+|opa+|eai|e\s*a[ií]|al[oô]+|alo|bom\s*dia|boa(\s*tarde|\s*noite)?|tudo bem|hey|hello|hi)([\s,.!?…]|$)/;
+function interpretar(text,estado,c){
+  const v=text.toLowerCase().trim();
+
+  // números mudam de significado conforme o ESTADO (nunca misturar)
+  if(estado==='pagamento'){
+    if(/(^|\b)(1|pix)\b/.test(v))return{intent:'PAGAMENTO',forma:'Pix'};
+    if(/(^|\b)(2|dinheiro|esp[ée]cie|troco)\b/.test(v))return{intent:'PAGAMENTO',forma:'Dinheiro'};
+    if(/(^|\b)(3|cart[ãa]o|cr[ée]dito|d[ée]bito|maquin)/.test(v))return{intent:'PAGAMENTO',forma:'Cartão'};
+  }
+  if(estado==='comprovante'&&/comprovante|enviei|mandei|paguei|pago|anexo|print|recibo|🧾|^ok$/.test(v))return{intent:'COMPROVANTE'};
+  if(estado==='endereco'&&text.trim().length>=8&&/\d/.test(text))return{intent:'ENDERECO',endereco:text.trim()};
+
+  // atendente (palavra sempre; "3" só vale como atendente no MENU)
+  if(/\batendente\b|\bhumano\b|pessoa de verdade|falar com (alguem|alguém|atendente|gente|uma pessoa)/.test(v))return{intent:'ATENDENTE'};
+  if(estado==='menu'){if(v==='1')return{intent:'VER_CARDAPIO'};if(v==='2')return{intent:'FAZER_PEDIDO'};if(v==='3')return{intent:'ATENDENTE'};}
+
+  if(/card[aá]pio|\bmenu\b|op[çc][õo]es|quais (sabores|op[çc]|marmit|bebida)|o que (voc[eê]s? )?(tem|teem|vende|tem de)/.test(v))return{intent:'VER_CARDAPIO'};
+  if(/fazer (um )?pedido|quero pedir|come[çc]ar (o )?pedido/.test(v))return{intent:'FAZER_PEDIDO'};
+  if(/(o que eu (pedi|j[áa] pedi)|meu pedido|qual.*(o )?total|quanto.*(deu|dando|fica|ficou|ta dando|t[áa] dando)|mostra.*pedido|ver (meu )?pedido|^resumo)/.test(v))return{intent:'CONSULTAR'};
+  if(/\bentreg(a|am|ar|as|ou)?\b|\bdelivery\b|taxa de entrega|voc[eê]s? entregam|vcs entregam/.test(v))return{intent:'ENTREGA'};
+
+  // correções (EDITAM o pedido, nunca duplicam)
+  let m=v.match(/\btroca(?:r)?\b\s*(?:a |o )?(.+?)\s+por\s+(?:a |o |uma |um )?(.+)/);
+  if(m)return{intent:'TROCAR',de:matchItem(m[1]),para:matchItem(m[2])};
+  m=v.match(/\b(?:muda(?:r)?|corrig[ei]\w*|na verdade|na vdd|era pra|era para)\b\s*(?:pra |para |por |o |a |um |uma |quero |seria )*(.+)/);
+  if(m&&c&&c.cart.length){const nv=parseOrder(m[1]);if(nv.length)return{intent:'CORRIGIR',itens:nv};}
+  if(/^(n[ãa]o|nao)\b/.test(v)){ // "não quero mais" → finaliza | "não, quero X" → corrige | "não" → recusa
+    if(/(quero mais|mais nada|nada mais)/.test(v))return{intent:'FINALIZAR'};
+    const nv=(c&&c.cart.length)?parseOrder(text):[];
+    if(nv.length)return{intent:'CORRIGIR',itens:nv};
+    return{intent:'NAO'};
+  }
+
+  m=v.match(/\b(?:remove|remover|tira|tirar|cancela|cancelar|retira|retirar)\b\s*(?:a |o |as |os |uma |um |meu |minha )?(.*)/);
+  if(m){const alvo=m[1].trim();return{intent:'REMOVER',produto:alvo?matchItem(alvo):(c&&c.cart.length?c.cart[c.cart.length-1]:null)};}
+
+  // pergunta de preço / disponibilidade (nunca trava no sim/não)
+  if(/(quanto custa|qual.*(valor|pre[çc]o)|pre[çc]o d|valor d|quanto (custa|fica|sai|é|e|pesa))|\btem\b|voc[eê]s? tem|vcs tem/.test(v)||/\?\s*$/.test(text))return{intent:'PRECO',produto:findProduct(text,c)};
+
+  if(/(finaliz|confirm|pode fechar|fechar pedido|fechar conta|pode conclu|concluir|encerrar|\bé só isso\b|\bso isso\b|\bsó isso\b|nada mais|tudo certo|isso mesmo|pode seguir)/.test(v))return{intent:'FINALIZAR'};
+  // tolera erros de digitação em "finalizar"/"confirmar" (ex.: "fianlizar", "finaliza", "confirmar")
+  if(v.split(/\s+/).some(w=>w.length>=5&&(lev(w,'finalizar')<=2||lev(w,'confirmar')<=2)))return{intent:'FINALIZAR'};
+
+  // adicionar itens (antes do "sim" — assim "quero X" vira pedido, não confirmação)
+  const itens=parseOrder(text);
+  if(itens.length)return{intent:'ADICIONAR',itens};
+
+  if(/^(sim|s|isso|aham|claro|com certeza|pode ser|bora|ok|blz|beleza|positivo|quero|mais|pode|manda|adiciona)\b/.test(v))return{intent:'SIM'};
+  if(RE_SAUDACAO.test(v))return{intent:'SAUDACAO'};
+  return{intent:'DESCONHECIDO'};
+}
+
+/* ===== CAMADA BACKEND: controla ESTADO, pedido único, fluxo e respostas ===== */
+function processarIntent(c,r,text){
+  // produto oferecido aguardando confirmação (pendingAdd)
+  if(c.pendingAdd){
+    if(r.intent==='SIM'){const it=c.pendingAdd;c.pendingAdd=null;const item={id:it.id,nome:it.nome,preco:it.preco,etiqueta:it.etiqueta,qtd:parseQty(text.toLowerCase()),note:parseNote(text.toLowerCase())};addItems(c,[item]);c.lastProduct=it;renderOrder();renderInbox();return confirmAndSuggest(c,[item]);}
+    if(r.intent==='NAO'){c.pendingAdd=null;if(c.step==='menu')c.step='pedido';return botSay(c,'Tudo bem! 🙂 Deseja mais alguma coisa ou finalizar?',500);}
+    c.pendingAdd=null; // qualquer outra intenção → segue o fluxo normal
+  }
+
+  // intenções UNIVERSAIS (valem em qualquer estado, mantendo o estado atual)
+  switch(r.intent){
+    case 'ATENDENTE':return handoff(c);
+    case 'CONSULTAR':return showCart(c);
+    case 'ENTREGA':return responderEntrega(c);
+    case 'VER_CARDAPIO':if(c.step==='menu')c.step='pedido';return botSay(c,menuTxt(),550);
+    case 'FAZER_PEDIDO':c.step='pedido';return botSay(c,'Pode mandar! 📝 Ex.: "2 marmitas e uma Coca". O que vai querer?',500);
+    case 'PRECO':return responderPreco(c,r.produto,text);
+    case 'REMOVER':return removerItem(c,r.produto);
+    case 'TROCAR':return trocarItem(c,r.de,r.para);
+    case 'CORRIGIR':return corrigirPedido(c,r.itens);
+    case 'SAUDACAO':return saudar(c);
+  }
+
+  // intenções dependentes do ESTADO
+  switch(c.step){
+    case 'menu':
+    case 'pedido':
+      if(r.intent==='ADICIONAR')return adicionarNoFluxo(c,r.itens);
+      if(r.intent==='SIM'){c.step='pedido';return botSay(c,'Pode mandar o próximo item 😄',400);}
+      if(r.intent==='NAO'||r.intent==='FINALIZAR')return tentarFinalizar(c);
+      return botSay(c,`Hmm, não entendi 🤔.\nMe diz seu pedido (ex.: "uma marmita de frango") ou escolha:\n${opcoes()}`,600);
+    case 'revisao':
+      if(r.intent==='ADICIONAR')return adicionarNoFluxo(c,r.itens);
+      if(r.intent==='SIM'||r.intent==='FINALIZAR')return askAddress(c);
+      if(r.intent==='NAO')return askAddress(c);
+      return botSay(c,'Quer *adicionar* ou *remover* algum item? Se estiver tudo certo, é só dizer *confirmar* que eu peço o endereço. 😊',500);
+    case 'endereco':
+      if(r.intent==='ENDERECO'){
+        c.endereco=r.endereco;renderOrder();renderInbox();
+        const m=mapaCfg();
+        if(m.entregaDinamica&&(m.zonas.length||(m.areas&&m.areas.length))){
+          c.typing=true;renderConversa();
+          resolverZona(c).then(z=>{
+            c.typing=false;
+            if(c.foraCobertura){
+              c.endereco='';renderOrder();renderInbox();
+              botSay(c,'Desculpe 😕 Acho que não entregamos para a sua região. Vou te encaminhar para um atendente.',300);
+              alertarAtendente(c,'fora_zona');
+              return; // permanece no passo 'endereco'
+            }
+            if(c.zonaTaxa!=null)botSay(c,`📍 Seu endereço entra na *${c.zonaNome}* — taxa de entrega *R$ ${brl(c.zonaTaxa)}*.`,250);
+            else if(c.zonaForaArea)botSay(c,`📍 Endereço dentro da nossa área — taxa padrão de *R$ ${brl(+R().taxaEntrega||0)}*.`,250);
+            renderOrder();renderInbox();askPayment(c);
+          });
+          return;
+        }
+        return askPayment(c);
+      }
+      if(r.intent==='ADICIONAR')return adicionarNoFluxo(c,r.itens);
+      return botSay(c,'Preciso de um endereço com rua e número, por favor 🙏',500);
+    case 'pagamento':
+      if(r.intent==='PAGAMENTO')return aplicarPagamento(c,r.forma);
+      if(r.intent==='ADICIONAR')return adicionarNoFluxo(c,r.itens);
+      return botSay(c,'Como prefere pagar? *1* Pix, *2* Dinheiro ou *3* Cartão.',500);
+    case 'comprovante':
+      if(r.intent==='COMPROVANTE'){c.pagStatus='comprovante';renderOrder();renderInbox();return botSay(c,'Recebi seu comprovante! 🧾 Vou validar e já confirmo. 😊',600);}
+      if(r.intent==='ADICIONAR')return adicionarNoFluxo(c,r.itens);
+      return botSay(c,'Assim que fizer o Pix, é só me mandar o comprovante 🙏',500);
+    case 'concluido':
+      return botSay(c,'Seu pedido já está em preparo! 🛵 Posso ajudar em algo mais?',500);
+    default:return greet(c);
+  }
+}
+
+/* entrada: mensagem do cliente → IA interpreta → backend processa */
+/* ============================================================
+   ConversationEngine — NÚCLEO ÚNICO da lógica do robô.
+   Toda mensagem do cliente passa por ConversationEngine.handle().
+   Nenhuma regra de negócio do atendimento vive fora daqui.
+   Submódulos (1 responsabilidade cada): StateManager · OrderManager ·
+   CardapioService · AIInterpreter · MessageBuilder.
+   Para crescer (cupom, retirada no balcão, agendamento…), basta
+   estender estes submódulos — sem tocar no resto do sistema.
+   ============================================================ */
+const ConversationEngine=(()=>{
+  const STATES={MENU:'menu',MONTANDO:'pedido',ENDERECO:'endereco',PAGAMENTO:'pagamento',COMPROVANTE:'comprovante',FINALIZADO:'concluido'};
+
+  // StateManager — estado da conversa + transições
+  const StateManager={estados:STATES, atual:c=>c.step||STATES.MENU, ir(c,novo){c.step=novo;return novo;}};
+
+  // CardapioService — única fonte do cardápio
+  const CardapioService={itens:()=>R().cardapio, achar:(txt,c)=>findProduct(txt,c), interpretarItens:txt=>parseOrder(txt), texto:()=>menuTxt(), resumo:()=>menuShort()};
+
+  // OrderManager — o pedido único e seus cálculos
+  const OrderManager={
+    adicionar:(c,itens)=>addItems(c,itens), remover:(c,p)=>removerItem(c,p), trocar:(c,de,para)=>trocarItem(c,de,para), corrigir:(c,novos)=>corrigirPedido(c,novos),
+    subtotal:c=>orderTotal(c), taxaEntrega:c=>taxa(c), total:c=>orderTotal(c)+taxa(c), vazio:c=>!c.cart.length
+  };
+
+  // AIInterpreter — SÓ interpreta a mensagem → {intent,...}. Nunca decide nem executa.
+  const AIInterpreter={interpretar:(txt,estado,c)=>interpretar(txt,estado,c)};
+
+  // MessageBuilder — monta as respostas ao cliente
+  const MessageBuilder={cardapio:()=>menuTxt(), resumoPedido:c=>{const tx=taxa(c);return 'Seu pedido:\n'+describe(c.cart)+`\n${tx>0?'Entrega: R$ '+brl(tx):'Entrega: grátis'}\n*Total: R$ ${brl(orderTotal(c)+tx)}*`;}, enviar:(c,txt,d)=>botSay(c,txt,d)};
+
+  // Controlador — decide a próxima ação a partir do estado + intenção (valida + executa regra)
+  const decidir=(c,intent,texto)=>processarIntent(c,intent,texto);
+
+  // ENTRADA ÚNICA — todo o fluxo passa por aqui, nesta ordem
+  function handle(conv,texto){
+    pushMsg(conv,'cust',texto);conv.unread=0;                    // mensagem do cliente
+    if(conv.humano)return;                                       // atendente assumiu → robô calado
+    if(!conv.step)conv.step=STATES.MENU;
+    const estado=StateManager.atual(conv);                       // 1) consulta estado
+    const intent=AIInterpreter.interpretar(texto,estado,conv);   // 2) IA interpreta (não decide)
+    decidir(conv,intent,texto);                                  // 3) valida → executa regra → atualiza pedido/estado → responde
+  }
+  return {STATES,StateManager,CardapioService,OrderManager,AIInterpreter,MessageBuilder,decidir,handle};
+})();
+
+/* entrada do cliente → 100% via ConversationEngine (nenhuma regra fora dele) */
+function handleCustomer(raw){const c=cur();if(!c)return;const t=(raw||'').trim();if(!t)return;ConversationEngine.handle(c,t);}
+
+/* ---------- intervenção (no card Conversa) ---------- */
+$('#takeBtn').onclick=()=>{const c=cur();if(!c)return;c.humano=!c.humano;if(c.humano)c.querAtendente=false;renderConversa();renderInbox();if(c.humano)$('#convInput').focus();else botSay(c,'Voltei! 🤖 Posso continuar. Quer adicionar algo ou finalizar?',500);};
+
+/* ===== Sinalização de atendimento + log de conversas ===== */
+const convById=id=>convs.find(c=>c.id===id);
+const CHATS_KEY='marmitex_chats_v1';
+function salvarChatsLog(){
+  try{
+    const log=convs.map(c=>({id:c.id,nome:c.nome,phone:c.phone,quando:c.alertAt||Date.now(),
+      sinalizado:!!c.sinalizado,querAtendente:!!c.querAtendente,motivo:c.alertMotivo||null,
+      endereco:c.endereco||null,total:c.cart?c.cart.reduce((s,i)=>s+i.preco*i.qtd,0):0,
+      mensagens:(c.messages||[]).map(m=>({who:m.who,text:m.text,time:m.time}))}));
+    localStorage.setItem(CHATS_KEY,JSON.stringify({geradoEm:new Date().toISOString(),conversas:log}));
+  }catch(e){}
+}
+function showFlagCard(c){
+  const card=$('#flagCard');if(!card||!c)return;
+  card.dataset.cid=c.id;
+  $('#flagCardName').textContent=c.nome;
+  $('#flagCardMsg').textContent=c.alertMotivo==='fora_zona'?'Pediu entrega fora da área de cobertura.':'Pediu para falar com um atendente.';
+  card.classList.toggle('done',!!c.sinalizado);
+  card.classList.add('show');
+}
+function hideFlagCard(){const card=$('#flagCard');if(card)card.classList.remove('show');}
+function sinalizarChat(c){
+  if(!c)return;c.sinalizado=true;salvarChatsLog();
+  const card=$('#flagCard');if(card&&+card.dataset.cid===c.id)card.classList.add('done');
+  renderInbox();if(c.id===currentId)renderConversa();
+  toast('Conversa sinalizada para análise 📌');
+}
+function exportarChats(){
+  salvarChatsLog();
+  const data=localStorage.getItem(CHATS_KEY)||'{}';
+  const blob=new Blob([data],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download='conversas-marmitex-'+new Date().toISOString().slice(0,10)+'.json';
+  document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href),1500);
+  toast('Conversas exportadas 📁');
+}
+$('#flagSigBtn').onclick=()=>{const c=convById(+$('#flagCard').dataset.cid);sinalizarChat(c);};
+$('#flagGoBtn').onclick=()=>{const id=+$('#flagCard').dataset.cid;if(convById(id))selectConv(id);hideFlagCard();};
+$('#flagCardX').onclick=hideFlagCard;
+$('#alertFlag').onclick=()=>{const c=cur();if(c)showFlagCard(c);};
+$('#exportChatsBtn').onclick=exportarChats;
+function confirmPayment(){const c=cur();if(!c||c.pagStatus!=='comprovante')return;c.pagStatus='confirmado';renderOrder();renderInbox();botSay(c,`Pagamento confirmado! ✅ Seu pedido entrou na fila de preparo. 🍱\nTempo estimado: ${R().tempoEntrega||'40 min'}.`,500);}
+
+/* ---------- envio (cliente ou atendente) ---------- */
+function sendConv(){
+  const c=cur();if(!c)return;const inp=$('#convInput');const t=inp.value.trim();if(!t)return;inp.value='';
+  if(c.humano){pushMsg(c,'agent',t);inp.focus();}
+  else handleCustomer(t);
+}
+$('#convSend').onclick=sendConv;
+$('#convInput').addEventListener('keydown',e=>{if(e.key==='Enter')sendConv();});
+
+/* ---------- inbox / seleção ---------- */
+function selectConv(id){currentId=id;const c=cur();if(c)c.unread=0;renderAt();}
+$('#newConvBtn').onclick=()=>{const c=newConv();currentId=c.id;renderAt();greet(c);};
+function convStatus(c){
+  if(c.humano)return['Atendimento humano','warn'];
+  if(c.pagStatus==='comprovante')return['Comprovante — confirmar','primary'];
+  if(c.pagStatus==='confirmado')return['Pago ✓','ok'];
+  if(c.pagStatus==='aguardando')return['Aguardando Pix','warn'];
+  if(c.pagStatus==='na_entrega')return['Paga na entrega','slate'];
+  if(c.endereco)return['Fechando pedido','primary'];
+  if(c.cart.length)return['Montando pedido','primary'];
+  return['Conversando','slate'];
+}
+const lastLine=c=>{const m=c.messages[c.messages.length-1];if(!m)return'Nova conversa';const p=m.who==='bot'?'Robô: ':m.who==='agent'?'Você: ':'';return p+m.text.split('\n')[0];};
+
+/* ---------- render atendimento ---------- */
+function renderInbox(){
+  const box=$('#inbox');
+  box.innerHTML=convs.map(c=>{const[st,cls]=convStatus(c);return `<div class="inbox-row ${c.id===currentId?'active':''}" data-id="${c.id}"><div class="inbox-av">${esc(c.ini)}</div><div class="inbox-main"><div class="inbox-name">${c.querAtendente?'<span class="inbox-flag" title="Quer atendente"></span> ':''}${esc(c.nome)}</div><div class="inbox-last">${esc(lastLine(c))}</div></div><div class="inbox-right"><span class="chip ${cls}">${st}</span>${c.unread?`<span class="unread">${c.unread}</span>`:''}</div></div>`;}).join('');
+  box.querySelectorAll('.inbox-row').forEach(r=>r.onclick=()=>selectConv(+r.dataset.id));
+  const has=convs.length>0;
+  $('#inboxCard').style.display=has?'block':'none';
+  $('#detail').style.display=(has&&currentId)?'grid':'none';
+  $('#waitingState').style.display=has?'none':'flex';
+}
+function renderConversa(){
+  const c=cur();
+  if(!c){$('#convMsgs').innerHTML='<div class="empty">Selecione uma conversa.</div>';return;}
+  $('#convMsgs').innerHTML=c.messages.map(m=>buildBubble(m.who,m.text,m.time)).join('')+(c.typing?'<div class="typing"><span></span><span></span><span></span></div>':'');
+  $('#convMsgs').scrollTop=$('#convMsgs').scrollHeight;
+  $('#convSub').textContent=c.humano?'você assumiu · robô pausado':'tempo real · WhatsApp';
+  const tk=$('#takeBtn');tk.textContent=c.humano?'Devolver':'Assumir';tk.classList.toggle('on',c.humano);
+  $('#alertFlag').style.display=c.querAtendente?'inline-flex':'none';
+  const row=$('#convInputRow'),send=$('#convSend'),mode=$('#convMode');
+  row.classList.toggle('agent',c.humano);send.classList.toggle('agent',c.humano);mode.classList.toggle('agent-on',c.humano);
+  $('#convInput').placeholder=c.humano?'Responder como atendente…':'Mensagem do cliente…';
+  $('#convModeTxt').textContent=c.humano?'Você está respondendo como atendente.':'Mensagem do cliente (teste). Com o WhatsApp, chega automático.';
+}
+function renderOrder(){
+  const c=cur();if(!c)return;
+  $('#convAv').textContent=c.ini;$('#convName').textContent=c.nome;$('#convPhone').textContent=c.phone;
+  $('#stepBadge').textContent=({menu:'Conversando',pedido:'Escolhendo itens',mais:'Adicionando itens',revisao:'Revisando pedido',endereco:'Coletando endereço',pagamento:'Forma de pagamento',comprovante:'Aguardando comprovante',concluido:'Pedido fechado'})[c.step]||'—';
+  $('#orderList').innerHTML=c.cart.length?c.cart.map(i=>`<div class="order-row"><span class="q">${i.qtd}×</span><div class="nm">${esc(i.nome)}${i.etiqueta?`<span class="etq etq-${i.etiqueta}">${i.etiqueta}</span>`:''}${i.note?`<span class="note">obs: ${esc(i.note)}</span>`:''}</div><span class="pr">R$ ${brl(i.preco*i.qtd)}</span></div>`).join(''):'<div class="order-empty">Nenhum item ainda.</div>';
+  const pend=entregaPendente(c);const tx=taxa(c);const tot=orderTotal(c)+((c.cart.length&&!pend)?tx:0);
+  $('#orderTotal').textContent=pend?brl(orderTotal(c))+' + entrega':brl(tot);
+  const a=$('#addrLine');a.querySelector('span').textContent='Endereço: '+(c.endereco||'aguardando');a.classList.toggle('pending',!c.endereco);
+  const entregaTxt=pend?' · entrega a calcular':(c.cart.length?(tx>0?' · entrega R$ '+brl(tx):' · entrega grátis'):'');
+  const p=$('#payLine');p.querySelector('span').textContent='Pagamento: '+(c.pagamento||'aguardando')+entregaTxt;p.classList.toggle('pending',!c.pagamento);
+  const ps=$('#payStatus');
+  if(c.pagStatus){const[label,cls,path]=PAGINFO[c.pagStatus];let h=`<span class="pay-badge chip ${cls}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="${path}"/></svg>${label}</span>`;if(c.pagStatus==='comprovante')h+=`<button class="btn btn-primary btn-confirm" id="confirmPayBtn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M20 6 9 17l-5-5"/></svg> Confirmar pagamento</button>`;ps.innerHTML=h;const b=$('#confirmPayBtn');if(b)b.onclick=confirmPayment;}else ps.innerHTML='';
+}
+function updateKPIs(){$('#kpiOrders').textContent=totals.pedidos;$('#kpiRevenue').textContent=brl(totals.faturamento);$('#kpiTicket').textContent=brl(totals.pedidos?totals.faturamento/totals.pedidos:0);}
+function renderAt(){renderInbox();renderConversa();renderOrder();}
+
+/* ---------- CONFIG (rascunho + salvar) ---------- */
+let draft=null,dirty=false;
+function cloneR(){return JSON.parse(JSON.stringify(R()));}
+function markDirty(){
+  // compara rascunho com o último estado salvo; iguais → "Tudo salvo."
+  dirty=JSON.stringify(draft)!==JSON.stringify(R());
+  $('#saveSt').textContent=dirty?'Alterações não salvas — clique em Salvar.':'Tudo salvo.';
+  $('#saveSt').classList.toggle('dirty',dirty);
+  renderAiPreview();
+}
+function enterConfig(){draft=cloneR();dirty=false;$('#saveSt').textContent='Tudo salvo.';$('#saveSt').classList.remove('dirty');renderConfig();}
+function renderConfig(){
+  $('#cfgNome').value=draft.nome;$('#cfgPix').value=draft.pixKey;$('#cfgHorario').value=draft.horario;$('#cfgTempo').value=draft.tempoEntrega||'';
+  $('#cfgTaxa').value=draft.entregaGratis?0:draft.taxaEntrega;$('#cfgTaxa').disabled=!!draft.entregaGratis;
+  $('#cfgGratis').classList.toggle('on',!!draft.entregaGratis);
+  renderMenu();renderPecs();renderAiPreview();
+}
+$('#cfgNome').addEventListener('input',e=>{draft.nome=e.target.value;markDirty();});
+$('#cfgPix').addEventListener('input',e=>{draft.pixKey=e.target.value;markDirty();});
+$('#cfgHorario').addEventListener('input',e=>{draft.horario=e.target.value;markDirty();});
+$('#cfgTempo').addEventListener('input',e=>{draft.tempoEntrega=e.target.value;markDirty();});
+$('#cfgTaxa').addEventListener('input',e=>{draft.taxaEntrega=parseFloat(e.target.value)||0;markDirty();});
+$('#cfgGratis').onclick=()=>{draft.entregaGratis=!draft.entregaGratis;$('#cfgGratis').classList.toggle('on',draft.entregaGratis);$('#cfgTaxa').disabled=draft.entregaGratis;$('#cfgTaxa').value=draft.entregaGratis?0:draft.taxaEntrega;markDirty();};
+$('#addMarmitaBtn').onclick=()=>{draft.cardapio.push({id:++_seq,nome:'',preco:0,tipo:'marmita',etiqueta:'',palavras:''});renderMenu();markDirty();};
+$('#addBebidaBtn').onclick=()=>{draft.cardapio.push({id:++_seq,nome:'',preco:0,tipo:'bebida',etiqueta:'lata',palavras:''});renderMenu();markDirty();};
+$('#addPecBtn').onclick=()=>{draft.peculiaridades.push('');renderPecs();markDirty();};
+function rowHtml(it,tipo){
+  const opts=etqOptions(tipo);
+  return `<div class="menu-row" data-id="${it.id}">
+    <input data-f="nome" value="${esc(it.nome)}" placeholder="${tipo==='bebida'?'Nome da bebida':'Nome do prato'}" />
+    <input data-f="preco" type="number" min="0" step="0.5" value="${it.preco}" />
+    <select data-f="etiqueta"><option value=""${it.etiqueta?'':' selected'}>—</option>${opts.map(e=>`<option value="${e}"${it.etiqueta===e?' selected':''}>${e}</option>`).join('')}</select>
+    <input data-f="palavras" value="${esc(it.palavras)}" placeholder="${tipo==='bebida'?'ex.: coca, lata':'ex.: frango, grelhado'}" />
+    <button class="icon-del" title="Remover"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg></button>
+  </div>`;
+}
+function bindRows(box){
+  box.querySelectorAll('.menu-row').forEach(row=>{
+    const id=+row.dataset.id;
+    row.querySelectorAll('input,select').forEach(inp=>inp.addEventListener('input',()=>{const it=draft.cardapio.find(x=>x.id===id);if(!it)return;const f=inp.dataset.f;it[f]=f==='preco'?(parseFloat(inp.value)||0):inp.value;markDirty();updateMenuCount();}));
+    row.querySelector('.icon-del').onclick=()=>{draft.cardapio=draft.cardapio.filter(x=>x.id!==id);renderMenu();markDirty();};
+  });
+}
+const updateMenuCount=()=>$('#menuCount').textContent=draft.cardapio.length+' itens';
+function renderMenu(){
+  const m=$('#menuRowsMarmita'),b=$('#menuRowsBebida');
+  m.innerHTML=draft.cardapio.filter(i=>(i.tipo||'marmita')==='marmita').map(it=>rowHtml(it,'marmita')).join('');
+  b.innerHTML=draft.cardapio.filter(i=>i.tipo==='bebida').map(it=>rowHtml(it,'bebida')).join('');
+  bindRows(m);bindRows(b);updateMenuCount();
+}
+function renderPecs(){
+  const box=$('#pecRows');
+  box.innerHTML=draft.peculiaridades.map((p,idx)=>`<div class="pec-row" data-i="${idx}"><textarea rows="1">${esc(p)}</textarea><button class="icon-del" title="Remover"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg></button></div>`).join('');
+  box.querySelectorAll('.pec-row').forEach(row=>{const idx=+row.dataset.i;row.querySelector('textarea').addEventListener('input',e=>{draft.peculiaridades[idx]=e.target.value;markDirty();});row.querySelector('.icon-del').onclick=()=>{draft.peculiaridades.splice(idx,1);renderPecs();markDirty();};});
+}
+function renderAiPreview(){
+  const r=draft||R();
+  const entrega=r.entregaGratis?'grátis':'R$ '+brl(r.taxaEntrega);
+  const fmt=arr=>arr.map(i=>`- [${i.etiqueta||'-'}] ${i.nome}: R$ ${brl(i.preco)}  (entende: ${i.palavras||'—'})`).join('\n')||'- (nenhum)';
+  const marmitas=r.cardapio.filter(i=>(i.tipo||'marmita')==='marmita');
+  const bebidas=r.cardapio.filter(i=>i.tipo==='bebida');
+  const txt=`# Restaurante: ${r.nome}\n# Horário: ${r.horario} | Pix: ${r.pixKey} | Entrega: ${entrega} | Tempo: ${r.tempoEntrega||'—'}\n\n## MARMITAS (P/M/G)\n${fmt(marmitas)}\n\n## BEBIDAS (lata/600/2L)\n${fmt(bebidas)}\n\n## REGRAS / PECULIARIDADES\n`+(r.peculiaridades.filter(Boolean).map(p=>`- ${p}`).join('\n')||'- (nenhuma)')+`\n\n> Enviado à IA como contexto a cada mensagem do cliente.`;
+  $('#aiPreview').innerHTML=esc(txt).replace(/^(#.*)$/gm,'<b>$1</b>');
+}
+function ensinar(text){const t=(text||'').trim();if(!t)return;draft.peculiaridades.push(t);renderPecs();markDirty();toast('Adicionado — clique em Salvar pra valer 📚');}
+$('#teachBtn').onclick=()=>{ensinar($('#teachInput').value);$('#teachInput').value='';};
+$('#teachInput').addEventListener('keydown',e=>{if(e.key==='Enter'){ensinar(e.target.value);e.target.value='';}});
+$('#saveBtn').onclick=()=>{
+  draft.cardapio=draft.cardapio.filter(i=>(i.nome||'').trim());
+  draft.peculiaridades=draft.peculiaridades.filter(p=>(p||'').trim());
+  if(draft.entregaGratis)draft.taxaEntrega=0;
+  DB.restaurant=JSON.parse(JSON.stringify(draft));saveDB();
+  dirty=false;$('#saveSt').textContent='Tudo salvo.';$('#saveSt').classList.remove('dirty');
+  $('#topSub').textContent='Painel do dono · '+R().nome;
+  enterConfig();toast('Configurações salvas ✓');
+};
+$('#discardBtn').onclick=()=>{enterConfig();toast('Alterações descartadas');};
+
+/* ---------- pedidos confirmados ---------- */
+const MOTO_SVG='<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5.4" cy="17.6" r="3.3"/><circle cx="18.6" cy="17.6" r="3.3"/><circle cx="14.1" cy="5.5" r="2.2"/><polygon points="2.6,12.6 9,10.7 14.2,11.2 18.2,12 19.4,13.1 15.4,14.4 7,14.8 3.6,13.7"/><polygon points="7.6,11.9 9.7,10.8 13.6,6.8 11.7,7.7"/><polygon points="12.7,7.6 13.9,6.9 18.7,11.3 17.5,12.4"/></svg>';
+function renderPedidos(){
+  // ativos (não limpos), com os confirmados (motoboy a caminho) sempre no fim
+  const list=convs.filter(c=>c.pagamento&&c.cart.length&&!c.arquivado).sort((a,b)=>(a.motoboy?1:0)-(b.motoboy?1:0));
+  $('#pedCount').textContent=list.length;
+  const box=$('#pedList');
+  if(!list.length){box.innerHTML='<div class="card"><div class="ped-empty"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#CBD5E1" stroke-width="1.6" stroke-linecap="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg><div>Nenhum pedido confirmado ainda.</div></div></div>';return;}
+  box.innerHTML=list.map(c=>{
+    const[st,cls]=convStatus(c);const tx=taxa(c);const tot=orderTotal(c)+tx;
+    const itens=c.cart.map(i=>`<div class="ped-it"><span class="q">${i.qtd}×</span><div class="nm">${esc(i.nome)}${i.etiqueta?`<span class="etq etq-${esc(i.etiqueta)}">${esc(i.etiqueta)}</span>`:''}${i.note?`<span class="obs">obs: ${esc(i.note)}</span>`:''}</div><span class="pr">R$ ${brl(i.preco*i.qtd)}</span></div>`).join('');
+    return `<div class="card" data-id="${c.id}"><div class="ped-card">
+      <div class="ped-head"><div class="ped-av">${esc(c.ini)}</div><div style="flex:1"><div class="ped-name">${esc(c.nome)}</div><div class="ped-sub">${esc(c.phone)}</div></div><span class="chip ${cls}">${st}</span></div>
+      <div class="ped-itens">${itens}</div>
+      <div class="ped-foot">
+        <div class="ped-info"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg> ${esc(c.endereco||'endereço não informado')}</div>
+        <div class="ped-info"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg> ${esc(c.pagamento)}${tx>0?' · entrega R$ '+brl(tx):' · entrega grátis'}<span class="ped-total">R$ ${brl(tot)}</span></div>
+        <button class="moto-btn ${c.motoboy?'on':''}" data-id="${c.id}" aria-label="${c.motoboy?'Motoboy a caminho (clique para desfazer)':'Confirmar saída do motoboy'}" title="${c.motoboy?'Motoboy a caminho':'Confirmar saída do motoboy'}"><span class="moto-ico">${MOTO_SVG}</span></button>
+      </div>
+    </div></div>`;
+  }).join('');
+  box.querySelectorAll('.moto-btn').forEach(b=>b.onclick=()=>{
+    const c=convs.find(x=>x.id===+b.dataset.id);if(!c)return;
+    c.motoboy=!c.motoboy;
+    b.classList.toggle('on',c.motoboy);   // toggle no lugar → transição de cor + animação suaves
+    b.setAttribute('aria-label',c.motoboy?'Motoboy a caminho (clique para desfazer)':'Confirmar saída do motoboy');
+    b.setAttribute('title',c.motoboy?'Motoboy a caminho':'Confirmar saída do motoboy');
+    if(c.motoboy){b.classList.remove('go');void b.offsetWidth;b.classList.add('go');toast('Motoboy a caminho 🛵');botSay(c,'🛵 *SUA MARMITA SAIU PARA ENTREGA!*\nJá está a caminho — bom apetite! 😋',450);}
+    flipReorderPedidos(c.motoboy?1100:750); // ao confirmar o motoboy, o pedido desce pro fim (animado)
+  });
+}
+
+/* ---------- reorganiza com FLIP mantendo os mesmos nós (chamado ao clicar no motoboy) ---------- */
+function flipReorderPedidos(ms){
+  const box=$('#pedList');
+  const nodes=[...box.querySelectorAll('.card[data-id]')];
+  if(nodes.length<2)return;
+  const first={};nodes.forEach(n=>first[n.dataset.id]=n.getBoundingClientRect().top);
+  const ordem=convs.filter(c=>c.pagamento&&c.cart.length&&!c.arquivado).slice().sort((a,b)=>(a.motoboy?1:0)-(b.motoboy?1:0)).map(c=>String(c.id));
+  ordem.forEach(id=>{const n=nodes.find(x=>x.dataset.id===id);if(n)box.appendChild(n);}); // move os nós (não recria → mantém cor/animação)
+  const after=[...box.querySelectorAll('.card[data-id]')];
+  after.forEach(n=>{const o=first[n.dataset.id];if(o==null)return;const dy=o-n.getBoundingClientRect().top;if(dy){n.style.transition='none';n.style.transform=`translateY(${dy}px)`;n.style.zIndex='1';}});
+  void box.offsetWidth;
+  after.forEach(n=>{n.style.transition=`transform ${ms}ms cubic-bezier(.45,.05,.2,1)`;n.style.transform='';});
+  setTimeout(()=>after.forEach(n=>{n.style.transition='';n.style.transform='';n.style.zIndex='';}),ms+120);
+}
+
+/* ---------- limpar: remove (arquiva) os pedidos finalizados (motoboy a caminho) da lista ---------- */
+function limparPedidos(){
+  const box=$('#pedList');
+  const feitos=convs.filter(c=>c.pagamento&&c.cart.length&&!c.arquivado&&c.motoboy);
+  if(!feitos.length){toast('Nada pra limpar — nenhum pedido finalizado 🙂');return;}
+  feitos.forEach(c=>{const el=box.querySelector(`.card[data-id="${c.id}"]`);if(el){el.style.transition='opacity .32s ease,transform .32s ease';el.style.opacity='0';el.style.transform='scale(.96) translateY(8px)';}});
+  setTimeout(()=>{feitos.forEach(c=>c.arquivado=true);renderPedidos();toast(feitos.length+' pedido(s) limpos ✓');},340);
+}
+
+/* ---------- tabs ---------- */
+function showTab(which){
+  const tabs={at:'#tabAt',ped:'#tabPed',mapa:'#tabMap',cfg:'#tabCfg'};
+  for(const k in tabs)$(tabs[k]).style.display=(k===which)?'flex':'none';
+  $('#tabAtBtn').classList.toggle('active',which==='at');
+  $('#tabPedBtn').classList.toggle('active',which==='ped');
+  $('#tabMapBtn').classList.toggle('active',which==='mapa');
+  $('#tabCfgBtn').classList.toggle('active',which==='cfg');
+  if(which==='cfg')enterConfig();
+  if(which==='ped')renderPedidos();
+  if(which==='mapa'){renderMapaCtrl();setTimeout(initMapa,60);}
+}
+$('#tabAtBtn').onclick=()=>showTab('at');
+$('#tabPedBtn').onclick=()=>showTab('ped');
+$('#tabMapBtn').onclick=()=>showTab('mapa');
+$('#tabCfgBtn').onclick=()=>showTab('cfg');
+$('#limparBtn').onclick=limparPedidos;
+
+/* ===== Mapas — zonas de entrega (Leaflet) ===== */
+const ZONA_CORES=['#4F46E5','#16A34A','#EA580C','#0EA5E9','#DB2777','#7C3AED','#CA8A04','#0891B2'];
+let _mapa=null,_lojaMarker=null,_zonaLayers={},_areaLayers={},_sel=null;
+function mapaCfg(){const r=R();if(!r.mapa)r.mapa={lat:-23.5614,lng:-46.6559,zoom:13,zonas:[]};return r.mapa;}
+const corZona=(z,i)=>z.cor||ZONA_CORES[i%ZONA_CORES.length];
+function brlNum(v){return (Number(v)||0).toFixed(2).replace('.',',');}
+
+/* ---- geocodificação (OpenStreetMap/Nominatim) + matching de zona ---- */
+const _geoCache={};
+const cidadeDe=ad=>ad?[(ad.city||ad.town||ad.village||ad.municipality||ad.suburb||''),(ad.state||'')].filter(Boolean).join(', '):'';
+// geocodifica; se `bounds` for passado, restringe (bounded) o resultado à caixa da área de cobertura
+function geocode(q,bounds){
+  q=(q||'').trim();if(!q)return Promise.resolve(null);
+  const key=q+'|'+(bounds?'b':'');
+  if(_geoCache[key]!==undefined)return Promise.resolve(_geoCache[key]);
+  let url='https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=1&q='+encodeURIComponent(q);
+  if(bounds)url+='&bounded=1&viewbox='+bounds.minLng+','+bounds.maxLat+','+bounds.maxLng+','+bounds.minLat;
+  return fetch(url,{headers:{'Accept':'application/json'}}).then(r=>r.json())
+    .then(a=>{const it=a&&a[0];const g=it?{lat:+it.lat,lng:+it.lon,nome:it.display_name,address:it.address||{}}:null;_geoCache[key]=g;return g;})
+    .catch(()=>null);
+}
+// reverse-geocode → "Cidade, Estado" do ponto da loja
+function reverseCidade(lat,lng){
+  const key='rev:'+lat.toFixed(4)+','+lng.toFixed(4);
+  if(_geoCache[key]!==undefined)return Promise.resolve(_geoCache[key]);
+  const url='https://nominatim.openstreetmap.org/reverse?format=json&addressdetails=1&zoom=12&lat='+lat+'&lon='+lng;
+  return fetch(url,{headers:{'Accept':'application/json'}}).then(r=>r.json())
+    .then(j=>{const c=cidadeDe(j&&j.address);_geoCache[key]=c;return c;}).catch(()=>'');
+}
+// garante mapa.cidadeUF (deriva da posição da loja se ainda não houver)
+function garantirCidade(){
+  const m=mapaCfg();
+  if(m.cidadeUF)return Promise.resolve(m.cidadeUF);
+  return reverseCidade(m.lat,m.lng).then(c=>{if(c){m.cidadeUF=c;saveDB();}return c;});
+}
+// caixa (viewbox) que engloba as áreas de trabalho, com margem — enviesa o geocoder pra perto
+function coberturaBounds(){
+  const a=areasCfg();const base=a.length?a:[{lat:mapaCfg().lat,lng:mapaCfg().lng,raio:6000}];
+  let minLat=90,maxLat=-90,minLng=180,maxLng=-180;
+  base.forEach(x=>{const r=(x.raio||5000)*1.4;const dLat=r/111000,dLng=r/(111000*Math.cos(x.lat*Math.PI/180));
+    minLat=Math.min(minLat,x.lat-dLat);maxLat=Math.max(maxLat,x.lat+dLat);
+    minLng=Math.min(minLng,x.lng-dLng);maxLng=Math.max(maxLng,x.lng+dLng);});
+  return {minLat,maxLat,minLng,maxLng};
+}
+// monta a busca do endereço do cliente já com a cidade da loja (se faltar) pra evitar rua homônima distante
+function montarQueryEndereco(end){
+  const m=mapaCfg();const e=(end||'').trim();const cid=m.cidadeUF||'';
+  if(cid){const primeira=cid.split(',')[0].trim();if(primeira&&!new RegExp(escRe(primeira),'i').test(e))return e+', '+cid+', Brasil';return /brasil/i.test(e)?e:e+', Brasil';}
+  return /brasil/i.test(e)?e:e+', Brasil';
+}
+function distM(la1,lo1,la2,lo2){const R=6371000,t=Math.PI/180,dla=(la2-la1)*t,dlo=(lo2-lo1)*t;const x=Math.sin(dla/2)**2+Math.cos(la1*t)*Math.cos(la2*t)*Math.sin(dlo/2)**2;return 2*R*Math.asin(Math.sqrt(x));}
+function zonaDoPonto(lat,lng){const m=mapaCfg();let best=null;m.zonas.forEach(z=>{if(distM(lat,lng,z.lat,z.lng)<=z.raio){if(!best||z.raio<best.raio)best=z;}});return best;}
+const zonaNome=z=>z?'Zona '+(mapaCfg().zonas.indexOf(z)+1):null;
+const areasCfg=()=>mapaCfg().areas||[];
+// ponto está dentro de alguma área de trabalho (cobertura do motoboy)?
+function naCobertura(lat,lng){const a=areasCfg();if(!a.length)return true;return a.some(x=>distM(lat,lng,x.lat,x.lng)<=x.raio);}
+// área de trabalho que melhor contém o centro de uma zona (a com mais folga). null = centro fora da malha
+function areaDaZona(z){let best=null,bestFolga=-1;areasCfg().forEach(a=>{const folga=a.raio-distM(z.lat,z.lng,a.lat,a.lng);if(folga>=0&&folga>bestFolga){bestFolga=folga;best=a;}});return best;}
+// raio máximo da zona pra NÃO ultrapassar a malha de trabalho que a contém
+function raioMaxZona(z){const a=areaDaZona(z);if(!a)return 0;return Math.max(150,Math.round(a.raio-distM(z.lat,z.lng,a.lat,a.lng)));}
+// limita a zona ao contorno da malha de trabalho; marca foraMalha se o centro estiver fora de toda área
+function clampZona(z){if(!areasCfg().length){z.foraMalha=false;return z;}const a=areaDaZona(z);if(!a){z.foraMalha=true;return z;}z.foraMalha=false;const max=raioMaxZona(z);if(z.raio>max)z.raio=max;return z;}
+function clampTodasZonas(){mapaCfg().zonas.forEach(clampZona);}
+// resolve cobertura + zona de um endereço → grava c.zonaTaxa/c.zonaNome/c.foraCobertura; devolve a zona (ou null)
+function resolverZona(c){
+  c.zonaTaxa=null;c.zonaNome=null;c.zonaForaArea=false;c.foraCobertura=false;c.geo=null;
+  const m=mapaCfg();
+  if(!m.entregaDinamica||!c.endereco||(!m.zonas.length&&!areasCfg().length))return Promise.resolve(null);
+  return garantirCidade().then(()=>{
+    const q=montarQueryEndereco(c.endereco);
+    const bounds=coberturaBounds();
+    // 1ª tentativa: restrita à região (resolve ruas homônimas distantes a favor da local)
+    return geocode(q,bounds).then(g=>g||geocode(q,null)); // fallback amplo só se não achar perto
+  }).then(g=>{
+    if(!g)return null;
+    c.geo={lat:g.lat,lng:g.lng};
+    // 1º filtro: malha de trabalho — fora da cobertura = não entrega
+    if(!naCobertura(g.lat,g.lng)){c.foraCobertura=true;return null;}
+    // 2º: dentro da cobertura, qual a zona de taxa
+    const z=zonaDoPonto(g.lat,g.lng);
+    if(z){c.zonaTaxa=z.taxa;c.zonaNome=zonaNome(z);}else{c.zonaForaArea=true;}
+    return z;
+  });
+}
+
+let _leafletLoading=false;
+function ensureLeaflet(cb){
+  if(typeof L!=='undefined'){cb();return;}
+  if(!document.getElementById('leafletCss')){
+    const css=document.createElement('link');css.id='leafletCss';css.rel='stylesheet';
+    css.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';document.head.appendChild(css);
+  }
+  if(_leafletLoading){setTimeout(()=>ensureLeaflet(cb),200);return;}
+  _leafletLoading=true;
+  const s=document.createElement('script');
+  s.src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+  s.onload=()=>cb();
+  s.onerror=()=>{_leafletLoading=false;const el=document.getElementById('mapaLeaflet');if(el)el.innerHTML='<div class="map-erro">Não foi possível carregar o mapa (sem internet?). Tente novamente.</div>';};
+  document.head.appendChild(s);
+}
+function initMapa(){
+  const m=mapaCfg();
+  if(_mapa){_mapa.invalidateSize();return;}
+  if(typeof L==='undefined'){ensureLeaflet(initMapa);return;}
+  _mapa=L.map('mapaLeaflet',{scrollWheelZoom:true}).setView([m.lat,m.lng],m.zoom||13);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(_mapa);
+  const lojaIcon=L.divIcon({className:'',html:'<div style="width:22px;height:22px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:#EA580C;border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.4)"></div>',iconSize:[22,22],iconAnchor:[11,22]});
+  _lojaMarker=L.marker([m.lat,m.lng],{draggable:true,icon:lojaIcon,title:'Local da loja (arraste)'}).addTo(_mapa);
+  _lojaMarker.bindTooltip('🟠 Sua loja',{direction:'top',offset:[0,-20]});
+  _lojaMarker.on('dragend',e=>{const p=e.target.getLatLng();m.lat=p.lat;m.lng=p.lng;m.cidadeUF='';saveDB();garantirCidade();});
+  _mapa.on('zoomend',()=>{m.zoom=_mapa.getZoom();saveDB();});
+  renderZonasMapa();
+}
+
+function renderZonasMapa(){
+  if(!_mapa)return;
+  const m=mapaCfg();
+  // ---- malha de trabalho (cobertura) — desenhada por baixo, tracejada/neutra ----
+  Object.values(_areaLayers).forEach(l=>{_mapa.removeLayer(l.circle);_mapa.removeLayer(l.marker);});
+  _areaLayers={};
+  (m.areas||[]).forEach((a)=>{
+    const circle=L.circle([a.lat,a.lng],{radius:a.raio,color:'#334155',weight:2,dashArray:'7 6',fillColor:'#475569',fillOpacity:.06}).addTo(_mapa);
+    circle.bindTooltip((a.nome||'Área de entrega')+' · '+(a.raio/1000).toFixed(1)+' km',{direction:'top',className:'zona-tip'});
+    const aIcon=L.divIcon({className:'',html:'<div style="width:16px;height:16px;border-radius:4px;background:#334155;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.25)"></div>',iconSize:[16,16],iconAnchor:[8,8]});
+    const marker=L.marker([a.lat,a.lng],{draggable:true,icon:aIcon,title:'Centro da área (arraste)'}).addTo(_mapa);
+    marker.on('drag',e=>circle.setLatLng(e.target.getLatLng()));
+    marker.on('dragend',e=>{const p=e.target.getLatLng();a.lat=p.lat;a.lng=p.lng;saveDB();renderZonasMapa();});
+    circle.on('click',()=>setSel('area',a.id));marker.on('click',()=>setSel('area',a.id));
+    _areaLayers[a.id]={circle,marker};
+  });
+  Object.values(_zonaLayers).forEach(l=>{_mapa.removeLayer(l.circle);_mapa.removeLayer(l.marker);});
+  _zonaLayers={};
+  m.zonas.forEach((z,i)=>{
+    clampZona(z); // a malha de trabalho é o limite: a zona não passa do contorno da área
+    const cor=corZona(z,i);
+    const circle=L.circle([z.lat,z.lng],{radius:z.raio,color:z.foraMalha?'#DC2626':cor,weight:2,dashArray:z.foraMalha?'5 5':null,fillColor:cor,fillOpacity:z.foraMalha?.08:.18}).addTo(_mapa);
+    circle.bindTooltip(z.foraMalha?'⚠️ Fora da malha de trabalho':'Taxa: R$ '+brlNum(z.taxa),{permanent:false,direction:'center',className:'zona-tip'});
+    const cIcon=L.divIcon({className:'',html:'<div style="width:14px;height:14px;border-radius:50%;background:'+cor+';border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.25)"></div>',iconSize:[14,14],iconAnchor:[7,7]});
+    const marker=L.marker([z.lat,z.lng],{draggable:true,icon:cIcon,title:'Centro da zona (arraste)'}).addTo(_mapa);
+    marker.on('drag',e=>circle.setLatLng(e.target.getLatLng()));
+    marker.on('dragend',e=>{const p=e.target.getLatLng();z.lat=p.lat;z.lng=p.lng;clampZona(z);saveDB();renderZonasMapa();});
+    circle.on('click',()=>setSel('zona',z.id));marker.on('click',()=>setSel('zona',z.id));
+    _zonaLayers[z.id]={circle,marker};
+  });
+  renderAreaList();
+  renderZonaList();
+  renderMeshCtrl();
+  highlightSel();
+}
+
+function renderZonaList(){
+  const m=mapaCfg();$('#zonaCount').textContent=m.zonas.length;
+  const box=$('#zonaList');
+  if(!m.zonas.length){box.innerHTML='<div class="zona-empty">Nenhuma zona ainda. Toque em <b>Adicionar zona</b> para criar a primeira região.</div>';return;}
+  box.innerHTML=m.zonas.map((z,i)=>{const cor=corZona(z,i);clampZona(z);return '<div class="zona-row'+(z.foraMalha?' zona-fora':'')+'" data-id="'+z.id+'">'
+    +'<span class="zona-dot" style="background:'+(z.foraMalha?'#DC2626':cor)+'"></span>'
+    +'<div class="zona-main"><div class="zona-nome">Zona '+(i+1)+(z.foraMalha?' <span class="zona-warn">⚠ fora da malha — arraste pra dentro</span>':'')+'</div>'
+    +'<div class="zona-raio"><input type="range" min="200" max="'+(areasCfg().length?Math.max(200,raioMaxZona(z)):12000)+'" step="100" value="'+z.raio+'" data-f="raio"><span class="km">'+(z.raio/1000).toFixed(1)+' km</span></div></div>'
+    +'<div class="zona-taxa"><label>R$</label><input type="number" min="0" step="0.5" value="'+z.taxa+'" data-f="taxa"></div>'
+    +'<button class="zona-del" title="Remover zona"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg></button>'
+    +'</div>';}).join('');
+  box.querySelectorAll('.zona-row').forEach(row=>{
+    const id=+row.dataset.id;const z=m.zonas.find(x=>x.id===id);if(!z)return;
+    const range=row.querySelector('[data-f=raio]'),km=row.querySelector('.km'),taxa=row.querySelector('[data-f=taxa]');
+    range.addEventListener('input',()=>{const max=areasCfg().length?raioMaxZona(z):12000;let v=+range.value;if(v>max){v=max;range.value=max;}z.raio=v;km.textContent=(z.raio/1000).toFixed(1)+' km';if(_zonaLayers[id])_zonaLayers[id].circle.setRadius(z.raio);});
+    range.addEventListener('change',saveDB);
+    taxa.addEventListener('input',()=>{z.taxa=parseFloat(taxa.value)||0;if(_zonaLayers[id])_zonaLayers[id].circle.setTooltipContent('Taxa: R$ '+brlNum(z.taxa));saveDB();});
+    row.querySelector('.zona-del').onclick=()=>{const r=R();r.mapa.zonas=r.mapa.zonas.filter(x=>x.id!==id);saveDB();renderZonasMapa();};
+  });
+}
+
+function addZona(){
+  if(!_mapa){initMapa();}
+  const m=mapaCfg();
+  // nasce dentro da maior área de trabalho (já válida); senão, no centro do mapa
+  const areas=areasCfg();
+  let lat,lng,raio=1500;
+  if(areas.length){const a=areas.reduce((x,y)=>y.raio>x.raio?y:x);lat=a.lat;lng=a.lng;raio=Math.min(1500,Math.round(a.raio*0.6));}
+  else{const c=_mapa?_mapa.getCenter():{lat:m.lat,lng:m.lng};lat=c.lat;lng=c.lng;}
+  const id=(m.zonas.reduce((a,z)=>Math.max(a,z.id),0))+1;
+  const z={id,lat,lng,raio,taxa:5,cor:ZONA_CORES[m.zonas.length%ZONA_CORES.length]};
+  clampZona(z);
+  m.zonas.push(z);
+  saveDB();renderZonasMapa();
+}
+$('#addZonaBtn').onclick=addZona;
+
+/* ---- malha de trabalho (áreas de cobertura do motoboy) ---- */
+function renderAreaList(){
+  const m=mapaCfg();const areas=m.areas||[];
+  if($('#areaCount'))$('#areaCount').textContent=areas.length;
+  const box=$('#areaList');if(!box)return;
+  if(!areas.length){box.innerHTML='<div class="zona-empty">Nenhuma área de trabalho. Toque em <b>Adicionar área</b> para definir até onde o motoboy entrega.</div>';return;}
+  box.innerHTML=areas.map((a,i)=>'<div class="zona-row area-row" data-id="'+a.id+'">'
+    +'<span class="zona-dot area-dot"></span>'
+    +'<div class="zona-main"><input class="area-nome" data-f="nome" value="'+esc(a.nome||('Área '+(i+1)))+'" />'
+    +'<div class="zona-raio"><input type="range" min="500" max="30000" step="250" value="'+a.raio+'" data-f="raio"><span class="km">'+(a.raio/1000).toFixed(1)+' km</span></div></div>'
+    +'<button class="zona-del" title="Remover área"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg></button>'
+    +'</div>').join('');
+  box.querySelectorAll('.area-row').forEach(row=>{
+    const id=+row.dataset.id;const a=areas.find(x=>x.id===id);if(!a)return;
+    const range=row.querySelector('[data-f=raio]'),km=row.querySelector('.km'),nome=row.querySelector('[data-f=nome]');
+    range.addEventListener('input',()=>{a.raio=+range.value;km.textContent=(a.raio/1000).toFixed(1)+' km';if(_areaLayers[id])_areaLayers[id].circle.setRadius(a.raio);});
+    range.addEventListener('change',()=>{saveDB();renderZonasMapa();}); // área mudou → zonas se ajustam ao novo limite
+    nome.addEventListener('input',()=>{a.nome=nome.value;if(_areaLayers[id])_areaLayers[id].circle.setTooltipContent((a.nome||'Área de entrega')+' · '+(a.raio/1000).toFixed(1)+' km');saveDB();});
+    row.querySelector('.zona-del').onclick=()=>{const r=R();r.mapa.areas=r.mapa.areas.filter(x=>x.id!==id);saveDB();renderZonasMapa();};
+  });
+}
+function addArea(){
+  if(!_mapa){initMapa();}
+  const m=mapaCfg();if(!m.areas)m.areas=[];
+  const c=_mapa?_mapa.getCenter():{lat:m.lat,lng:m.lng};
+  const id=(m.areas.reduce((a,x)=>Math.max(a,x.id),0))+1;
+  m.areas.push({id,lat:c.lat,lng:c.lng,raio:5000,nome:'Área '+(m.areas.length+1)});
+  saveDB();renderZonasMapa();
+}
+$('#addAreaBtn').onclick=addArea;
+
+/* ===== controlador prático: editar a malha selecionada ===== */
+function meshList(){const m=mapaCfg();return [...(m.areas||[]).map((a,i)=>({tipo:'area',obj:a,nome:a.nome||('Área '+(i+1)),cor:'#334155'})),...m.zonas.map((z,i)=>({tipo:'zona',obj:z,nome:'Zona '+(i+1),cor:z.foraMalha?'#DC2626':corZona(z,i)}))];}
+function selAtual(){if(!_sel)return null;const arr=meshList();return arr.find(x=>x.tipo===_sel.tipo&&x.obj.id===_sel.id)||null;}
+function setSel(tipo,id){_sel={tipo,id};renderMeshCtrl();highlightSel();}
+function highlightSel(){
+  Object.entries(_areaLayers).forEach(([id,l])=>l.circle.setStyle({weight:(_sel&&_sel.tipo==='area'&&+id===_sel.id)?4:2}));
+  Object.entries(_zonaLayers).forEach(([id,l])=>l.circle.setStyle({weight:(_sel&&_sel.tipo==='zona'&&+id===_sel.id)?4:2}));
+}
+function renderMeshCtrl(){
+  if(!$('#meshChips'))return;
+  const arr=meshList();
+  if(!_sel||!selAtual())_sel=arr.length?{tipo:arr[0].tipo,id:arr[0].obj.id}:null;
+  // chips
+  $('#meshChips').innerHTML=arr.map(x=>{const on=_sel&&_sel.tipo===x.tipo&&x.obj.id===_sel.id;return '<button class="mesh-chip '+x.tipo+(on?' sel':'')+'" data-t="'+x.tipo+'" data-id="'+x.obj.id+'"><span class="mc-dot" style="background:'+x.cor+'"></span>'+esc(x.nome)+'</button>';}).join('')||'<span class="mesh-hint">Adicione uma área ou zona abaixo.</span>';
+  $('#meshChips').querySelectorAll('.mesh-chip').forEach(b=>b.onclick=()=>setSel(b.dataset.t,+b.dataset.id));
+  const sel=selAtual();const ed=$('#meshEditor');
+  if(!sel){ed.classList.add('empty');$('#meshEdName').textContent='—';$('#meshKm').textContent='—';return;}
+  ed.classList.remove('empty');
+  const o=sel.obj;
+  $('#meshEdDot').style.background=sel.cor;
+  $('#meshEdName').textContent=sel.tipo==='area'?(o.nome||'Área'):sel.nome;
+  $('#meshEdType').textContent=sel.tipo==='area'?'Malha de trabalho':'Zona de taxa';
+  const isZona=sel.tipo==='zona';
+  const rng=$('#meshRange');
+  rng.min=isZona?200:500;
+  rng.max=isZona?(areasCfg().length?Math.max(200,raioMaxZona(o)):12000):30000;
+  rng.value=o.raio;
+  $('#meshKm').textContent=(o.raio/1000).toFixed(2).replace('.',',')+' km';
+  $('#meshFeeWrap').style.display=isZona?'flex':'none';
+  if(isZona)$('#meshFee').value=o.taxa;
+  scrollChipIntoView();
+}
+function scrollChipIntoView(){const c=$('#meshChips .mesh-chip.sel');if(c&&c.scrollIntoView)c.scrollIntoView({block:'nearest',inline:'center'});}
+function meshSetRaio(v){
+  const sel=selAtual();if(!sel)return;const o=sel.obj;
+  let val=Math.round(v/100)*100;
+  if(sel.tipo==='zona'&&areasCfg().length){const mx=raioMaxZona(o);if(val>mx)val=mx;}
+  if(val<150)val=150;
+  o.raio=val;
+  const lay=(sel.tipo==='area'?_areaLayers:_zonaLayers)[o.id];
+  if(lay)lay.circle.setRadius(val);
+  if(sel.tipo==='area')clampTodasZonas(); // mudou a área → re-limita zonas
+  $('#meshKm').textContent=(val/1000).toFixed(2).replace('.',',')+' km';
+  $('#meshRange').value=val;
+  saveDB();
+}
+$('#meshRange').addEventListener('input',e=>meshSetRaio(+e.target.value));
+$('#meshRange').addEventListener('change',()=>renderZonasMapa());
+$('#meshMinus').onclick=()=>{const s=selAtual();if(s){meshSetRaio(s.obj.raio-250);renderZonasMapa();}};
+$('#meshPlus').onclick=()=>{const s=selAtual();if(s){meshSetRaio(s.obj.raio+250);renderZonasMapa();}};
+$('#meshFee').addEventListener('input',e=>{const s=selAtual();if(s&&s.tipo==='zona'){s.obj.taxa=parseFloat(e.target.value)||0;const lay=_zonaLayers[s.obj.id];if(lay)lay.circle.setTooltipContent('Taxa: R$ '+brlNum(s.obj.taxa));saveDB();renderZonaList();}});
+$('#meshCenter').onclick=()=>{const s=selAtual();if(s&&_mapa){_mapa.panTo([s.obj.lat,s.obj.lng]);}};
+$('#meshDel').onclick=()=>{const s=selAtual();if(!s)return;const r=R();if(s.tipo==='area')r.mapa.areas=r.mapa.areas.filter(x=>x.id!==s.obj.id);else r.mapa.zonas=r.mapa.zonas.filter(x=>x.id!==s.obj.id);_sel=null;saveDB();renderZonasMapa();};
+
+function renderMapaCtrl(){
+  const m=mapaCfg();
+  $('#dynSwitch').classList.toggle('on',!!m.entregaDinamica);
+  $('#tabMap').classList.toggle('maps-off',!m.entregaDinamica);
+  if(document.activeElement!==$('#lojaEndereco'))$('#lojaEndereco').value=m.endereco||'';
+}
+$('#dynSwitch').onclick=()=>{const m=mapaCfg();m.entregaDinamica=!m.entregaDinamica;saveDB();renderMapaCtrl();toast(m.entregaDinamica?'Entrega dinâmica ligada':'Entrega dinâmica desligada (taxa única)');};
+$('#lojaEndereco').addEventListener('input',e=>{mapaCfg().endereco=e.target.value;saveDB();});
+$('#lojaLocBtn').onclick=()=>{
+  const m=mapaCfg();const q=($('#lojaEndereco').value||'').trim();
+  const st=$('#lojaLocStatus');
+  if(!q){st.className='loc-status err';st.textContent='Digite o endereço do restaurante primeiro.';return;}
+  st.className='loc-status';st.textContent='Localizando…';
+  const btn=$('#lojaLocBtn');btn.disabled=true;
+  geocode(q).then(g=>{
+    btn.disabled=false;
+    if(!g){st.className='loc-status err';st.textContent='Endereço não encontrado. Tente incluir cidade/CEP.';return;}
+    m.lat=g.lat;m.lng=g.lng;const cid=cidadeDe(g.address);if(cid)m.cidadeUF=cid;saveDB();
+    if(_mapa){_mapa.setView([g.lat,g.lng],15);if(_lojaMarker)_lojaMarker.setLatLng([g.lat,g.lng]);}
+    st.className='loc-status ok';st.textContent='✓ Loja em '+(cid||(g.nome||'').split(',').slice(0,2).join(','))+' — endereços dos clientes serão buscados nessa região.';
+  });
+};
+
+/* ---------- seeds ---------- */
+function seed(){
+  const ana=newConv({nome:'Ana Costa',ini:'AC',step:'comprovante',
+    cart:[{id:2,nome:'Marmita de Carne',preco:20,etiqueta:'G',qtd:1,note:'sem cebola'},{id:4,nome:'Pepsi',preco:6,etiqueta:'lata',qtd:1,note:null}],
+    endereco:'Av. Brasil, 880 - Vila Nova',pagamento:'Pix',pagStatus:'comprovante',unread:1,
+    messages:[{who:'bot',text:'Olá! 👋 Sou o robô da Marmitaria Sabor Caseiro.',time:'12:31'},{who:'cust',text:'uma marmita de carne sem cebola e uma pepsi',time:'12:32'},{who:'bot',text:'Anotado! ✅\n• 1× Marmita de Carne (sem cebola)\n• 1× Pepsi',time:'12:32'},{who:'cust',text:'Av. Brasil, 880 - Vila Nova. Pix',time:'12:33'},{who:'bot',text:'Pedido registrado! Chave Pix: marmitaria@sabor.com. Me envie o comprovante 🧾',time:'12:33'},{who:'cust',text:'enviei o comprovante 🧾',time:'12:35'},{who:'bot',text:'Recebi seu comprovante! 🧾 Vou validar e já confirmo. 😊',time:'12:35'}]});
+  newConv({nome:'Carlos Souza',ini:'CS',step:'concluido',cart:[{id:1,nome:'Marmita de Frango',preco:18,etiqueta:'M',qtd:2,note:null}],endereco:'Rua 7 de Setembro, 45',pagamento:'Dinheiro',pagStatus:'na_entrega',
+    messages:[{who:'bot',text:'Olá! 👋 Como posso ajudar?',time:'12:40'},{who:'cust',text:'2 marmitas de frango',time:'12:41'},{who:'bot',text:'Anotado! ✅\n• 2× Marmita de Frango\n\nDeseja adicionar mais alguma coisa? (sim / não)',time:'12:41'},{who:'cust',text:'não, pode fechar',time:'12:42'},{who:'bot',text:'Perfeito! 📍 Qual o endereço de entrega?',time:'12:42'},{who:'cust',text:'Rua 7 de Setembro, 45 — dinheiro',time:'12:42'},{who:'bot',text:'Pedido confirmado! 🎉 Total R$ 41,00 — Dinheiro. Pagamento na entrega.',time:'12:42'}]});
+  totals.pedidos=2;totals.faturamento=(20+6+taxa())+(18*2+taxa());updateKPIs();
+  currentId=ana.id;
+}
+
+/* ---------- bloqueio (painel do criador) ---------- */
+const THIS_RESTAURANT_ID=1;
+const DEMO_TENANT={id:1,nome:'Marmitaria Sabor Caseiro',dono:'José Almeida',cidade:'São Paulo - SP',tel:'(11) 98765-4321',plano:'Pro',valor:149,desde:'jan/2026',pedidosMes:312,bloqueado:false,hist:[]};
+// garante que a loja demo exista no painel do criador (auto-recria se sumir)
+function ensureDemoTenant(){
+  let tenants=null;try{tenants=JSON.parse(localStorage.getItem('criador_tenants_v1'));}catch(e){}
+  if(!tenants)return; // criador nunca rodou → loja demo livre
+  if(!tenants.some(x=>x.id===THIS_RESTAURANT_ID)){
+    const d=new Date();d.setHours(0,0,0,0);const liberado=new Date(d.getTime()+30*86400000).toISOString().slice(0,10);
+    tenants.unshift({...DEMO_TENANT,liberadoAte:liberado});
+    try{localStorage.setItem('criador_tenants_v1',JSON.stringify(tenants));}catch(e){}
+  }
+}
+function checkAccess(){
+  let tenants=null;try{tenants=JSON.parse(localStorage.getItem('criador_tenants_v1'));}catch(e){}
+  let bloqueado=false;
+  if(tenants){
+    const t=tenants.find(x=>x.id===THIS_RESTAURANT_ID);
+    if(t){ // só bloqueia por BLOQUEIO explícito ou vencimento — nunca por dado ausente
+      bloqueado=!!t.bloqueado;
+      if(!bloqueado&&t.liberadoAte){const d=new Date(t.liberadoAte+'T00:00:00');const h=new Date();h.setHours(0,0,0,0);if(d<h)bloqueado=true;}
+    }
+  }
+  $('#blockOverlay').style.display=bloqueado?'flex':'none';
+}
+
+/* ---------- limpeza automática: remove conversas paradas / pedidos finalizados há ≥ 3 min ---------- */
+const TTL_MS=3*60*1000;
+function limparConversasParadas(){
+  const agora=Date.now();const antes=convs.length;
+  convs=convs.filter(c=>c.humano||(agora-(c.lastAt||agora))<TTL_MS); // atendente cuidando → preserva
+  if(convs.length!==antes){
+    if(!convs.find(x=>x.id===currentId))currentId=convs.length?convs[0].id:null;
+    renderInbox();renderConversa();renderOrder();
+    if($('#tabPed')&&$('#tabPed').style.display!=='none')renderPedidos();
+  }
+}
+setInterval(limparConversasParadas,30000);
+
+/* ---------- BOOT ---------- */
+$('#topSub').textContent='Painel do dono · '+R().nome;
+seed();renderAt();ensureDemoTenant();checkAccess();showTab('at');
+window.addEventListener('storage',e=>{if(e.key==='criador_tenants_v1')checkAccess();});
+
+/* expõe para a bateria de testes (e o ConversationEngine) */
+window.__app={parseOrder,matchItem,lev,R,DB,taxa,handleCustomer,cur,convs:()=>convs,greet,newConv,selectConv,checkAccess,findProduct,isBebida,saveDB,get draft(){return draft;},showTab,ConversationEngine,limparConversasParadas,get TTL(){return TTL_MS;},geocode,zonaDoPonto,resolverZona,mapaCfg,distM,zonaNome,naCobertura,areasCfg,addArea,addZona,alertarAtendente,sinalizarChat,salvarChatsLog,exportarChats,garantirCidade,reverseCidade,coberturaBounds,montarQueryEndereco,clampZona,raioMaxZona,areaDaZona,clampTodasZonas,setSel,renderMeshCtrl,meshSetRaio,selAtual};
+</script>
+</body>
+</html>

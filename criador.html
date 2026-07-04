@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Painel do Criador — Robô de Marmitex</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;500;600;700&family=Poppins:wght@500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#F1F5F9;--surface:#FFFFFF;--ink:#0F172A;--muted:#475569;--faint:#94A3B8;--line:#E2E8F0;
+    --primary:#4F46E5;--primary-soft:#EEF2FF;--brand:#EA580C;--brand-soft:#FFF7ED;
+    --ok:#16A34A;--ok-soft:#F0FDF4;--warn:#D97706;--warn-soft:#FFFBEB;--danger:#DC2626;--danger-soft:#FEF2F2;
+    --radius:16px;--shadow:0 1px 2px rgba(15,23,42,.04),0 6px 16px rgba(15,23,42,.045);--shadow-sm:0 1px 2px rgba(15,23,42,.05);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{height:100%;}
+  body{font-family:'Open Sans',system-ui,sans-serif;background:var(--bg);color:var(--ink);line-height:1.5;-webkit-font-smoothing:antialiased;}
+  h1,h2,h3{font-family:'Poppins',sans-serif;}
+  button{font-family:inherit;cursor:pointer;border:none;background:none;}
+  input,select{font-family:inherit;}
+  ::-webkit-scrollbar{width:8px;height:8px;}::-webkit-scrollbar-thumb{background:#CBD5E1;border-radius:4px;}
+
+  /* LOGIN */
+  .login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;background:radial-gradient(120% 120% at 50% 0%,#312E81 0%,#1E1B4B 45%,#0F172A 100%);}
+  .login-card{width:100%;max-width:400px;background:var(--surface);border-radius:22px;box-shadow:0 20px 60px rgba(0,0,0,.35);padding:34px 30px;}
+  .login-logo{width:54px;height:54px;border-radius:15px;background:linear-gradient(145deg,#FB923C 0%,#EA580C 55%,#C2410C 100%);box-shadow:0 4px 14px rgba(234,88,12,.35),inset 0 1px 0 rgba(255,255,255,.25);display:grid;place-items:center;color:#fff;margin:0 auto 16px;}
+  .login-card h1{font-size:21px;text-align:center;letter-spacing:-.02em;}
+  .login-card .sub{text-align:center;color:var(--faint);font-size:13px;margin-top:4px;margin-bottom:24px;}
+  .field{margin-bottom:14px;}
+  .field label{display:block;font-size:12px;font-weight:700;color:var(--muted);margin-bottom:6px;}
+  .field input,.field select{width:100%;border:1px solid var(--line);border-radius:11px;padding:11px 14px;font-size:14px;outline:none;transition:border-color .15s;background:var(--surface);}
+  .field input:focus,.field select:focus{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-soft);}
+  .btn-login{width:100%;background:var(--primary);color:#fff;font-weight:700;font-size:14.5px;padding:12px;border-radius:11px;margin-top:6px;transition:filter .15s;}
+  .btn-login:hover{filter:brightness(1.06);}
+  .login-err{display:none;background:var(--danger-soft);color:var(--danger);font-size:12.5px;font-weight:600;padding:9px 12px;border-radius:10px;margin-bottom:14px;}
+  .login-err.show{display:block;}
+  .login-hint{margin-top:18px;text-align:center;font-size:11.5px;color:var(--faint);background:var(--bg);padding:9px;border-radius:10px;}
+
+  /* APP */
+  .app{display:none;}
+  .topbar{height:64px;background:var(--surface);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:14px;padding:0 24px;position:sticky;top:0;z-index:30;}
+  .logo{width:38px;height:38px;border-radius:11px;flex:none;background:linear-gradient(145deg,#FB923C 0%,#EA580C 55%,#C2410C 100%);box-shadow:0 2px 8px rgba(234,88,12,.28),inset 0 1px 0 rgba(255,255,255,.25);display:grid;place-items:center;color:#fff;}
+  .topbar .title{font-weight:700;font-size:16px;letter-spacing:-.01em;}.topbar .subtitle{font-size:12px;color:var(--faint);}
+  .who{margin-left:auto;display:flex;align-items:center;gap:12px;}.who .nm{font-size:13px;font-weight:600;}
+  .btn-out{display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:600;color:var(--muted);background:var(--bg);padding:8px 13px;border-radius:10px;}
+  .btn-out:hover{background:#E2E8F0;}
+
+  .stage{max-width:1200px;margin:0 auto;padding:24px;}
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px;}
+  .kpi{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow-sm);}
+  .kpi .label{font-size:12px;color:var(--muted);font-weight:600;display:flex;align-items:center;gap:6px;}
+  .kpi .value{font-family:'Poppins';font-size:25px;font-weight:700;margin-top:6px;letter-spacing:-.02em;}
+  .kpi .value small{font-size:14px;color:var(--faint);font-weight:600;}
+  .kpi.danger .value{color:var(--danger);}.kpi.ok .value{color:var(--ok);}
+
+  .layout{display:grid;grid-template-columns:1.1fr .9fr;gap:20px;align-items:start;}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;}
+  .card-h{padding:15px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px;}
+  .card-h h2{font-size:16px;font-weight:700;}
+  .btn-add-top{margin-left:auto;display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;color:#fff;background:var(--primary);padding:7px 12px;border-radius:999px;}
+  .btn-add-top:hover{filter:brightness(1.06);}
+  .search{padding:12px 16px;border-bottom:1px solid var(--line);}
+  .search input{width:100%;border:1px solid var(--line);border-radius:10px;padding:9px 13px;font-size:13.5px;outline:none;}
+  .search input:focus{border-color:var(--primary);}
+
+  .rest-row{display:flex;gap:12px;align-items:center;padding:13px 16px;cursor:pointer;border-bottom:1px solid var(--line);transition:background .12s;}
+  .rest-row:last-child{border-bottom:none;}.rest-row:hover{background:var(--bg);}
+  .rest-row.active{background:var(--primary-soft);box-shadow:inset 3px 0 0 var(--primary);}
+  .rest-av{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;font-weight:700;font-family:'Poppins';font-size:15px;color:#fff;flex:none;}
+  .rest-main{flex:1;min-width:0;}.rest-name{font-weight:700;font-size:14px;}.rest-meta{font-size:12px;color:var(--faint);margin-top:1px;}
+  .rest-right{display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex:none;}
+  .chip{font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:999px;white-space:nowrap;display:inline-flex;align-items:center;gap:5px;}
+  .chip.ok{background:var(--ok-soft);color:var(--ok);}.chip.warn{background:var(--warn-soft);color:#B45309;}
+  .chip.danger{background:var(--danger-soft);color:var(--danger);}.chip.slate{background:#F1F5F9;color:var(--muted);}
+  .rest-val{font-size:12.5px;font-weight:700;color:var(--muted);}
+
+  .detail-empty{padding:50px 24px;text-align:center;color:var(--faint);}.detail-empty svg{margin-bottom:12px;}
+  .det-head{display:flex;align-items:center;gap:14px;margin-bottom:18px;}
+  .det-av{width:54px;height:54px;border-radius:14px;display:grid;place-items:center;font-weight:700;font-family:'Poppins';font-size:18px;color:#fff;flex:none;}
+  .det-name{font-size:17px;font-weight:700;}.det-meta{font-size:12.5px;color:var(--faint);}
+  .det-stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px;}
+  .stat{background:var(--bg);border-radius:12px;padding:12px 13px;}
+  .stat .l{font-size:11.5px;color:var(--muted);font-weight:600;}.stat .v{font-family:'Poppins';font-size:16px;font-weight:700;margin-top:2px;}
+  .sec-title{font-size:12px;font-weight:700;color:var(--faint);text-transform:uppercase;letter-spacing:.04em;margin:0 0 9px;}
+
+  /* access control */
+  .access-box{border:1px solid var(--line);border-radius:13px;padding:14px;margin-bottom:18px;}
+  .access-top{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
+  .access-top .big{font-family:'Poppins';font-weight:700;font-size:15px;}
+  .access-top .small{font-size:12px;color:var(--faint);}
+  .liberar-row{display:flex;gap:8px;align-items:center;margin-bottom:10px;}
+  .liberar-row input{width:78px;border:1px solid var(--line);border-radius:10px;padding:9px 11px;font-size:13.5px;outline:none;text-align:center;}
+  .liberar-row input:focus{border-color:var(--primary);}
+  .chips-dias{display:flex;gap:6px;}
+  .chip-dia{font-size:12px;font-weight:700;color:var(--primary);background:var(--primary-soft);padding:6px 10px;border-radius:8px;}
+  .chip-dia:hover{filter:brightness(.97);}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font-weight:700;font-size:13.5px;padding:10px 15px;border-radius:11px;transition:filter .15s,background .15s;}
+  .btn-primary{background:var(--primary);color:#fff;}.btn-primary:hover{filter:brightness(1.06);}
+  .btn-ok{background:var(--ok);color:#fff;}.btn-ok:hover{filter:brightness(1.05);}
+  .btn-danger{background:var(--danger);color:#fff;}.btn-danger:hover{filter:brightness(1.05);}
+  .btn-ghost{background:var(--surface);color:var(--ink);border:1px solid var(--line);}.btn-ghost:hover{background:var(--bg);}
+  .btn-block{width:100%;}
+  .pay-hist{display:flex;flex-direction:column;gap:7px;margin-bottom:18px;}
+  .pay-item{display:flex;align-items:center;gap:10px;padding:9px 12px;background:var(--bg);border-radius:10px;font-size:13px;}
+  .pay-item .mes{flex:1;font-weight:600;}
+  .contact{font-size:13px;color:var(--muted);display:flex;flex-direction:column;gap:6px;margin-bottom:18px;}
+  .contact div{display:flex;align-items:center;gap:8px;}.contact svg{color:var(--faint);flex:none;}
+  .det-actions{display:flex;gap:10px;flex-wrap:wrap;}
+  .det-actions .btn{flex:1;}
+
+  /* add form */
+  .add-form{padding:18px;}
+  .add-form .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;font-weight:600;font-size:13.5px;padding:11px 18px;border-radius:12px;box-shadow:var(--shadow);opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:50;}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+  @media (max-width:900px){.kpis{grid-template-columns:1fr 1fr;}.layout{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+
+  <!-- LOGIN -->
+  <div class="login-wrap" id="loginView">
+    <form class="login-card" id="loginForm" autocomplete="off">
+      <div class="login-logo"><svg width="29" height="29" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 11h17"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M9 6c-.7-.9-.7-1.8 0-2.7"/><path d="M12 6c-.7-.9-.7-1.8 0-2.7"/><path d="M15 6c-.7-.9-.7-1.8 0-2.7"/></svg></div>
+      <h1>Painel do Criador</h1>
+      <div class="sub">Robô de Marmitex · acesso restrito</div>
+      <div class="login-err" id="loginErr">E-mail ou senha incorretos.</div>
+      <div class="field"><label for="email">E-mail</label><input id="email" type="email" placeholder="voce@robo.com" /></div>
+      <div class="field"><label for="senha">Senha</label><input id="senha" type="password" placeholder="••••••" /></div>
+      <button class="btn-login" type="submit">Entrar</button>
+      <div class="login-hint">Demo — e-mail: <b>admin@robo.com</b> · senha: <b>1234</b></div>
+    </form>
+  </div>
+
+  <!-- APP -->
+  <div class="app" id="appView">
+    <header class="topbar">
+      <div class="logo" aria-hidden="true"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 11h17"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M9 6c-.7-.9-.7-1.8 0-2.7"/><path d="M12 6c-.7-.9-.7-1.8 0-2.7"/><path d="M15 6c-.7-.9-.7-1.8 0-2.7"/></svg></div>
+      <div><div class="title">Painel do Criador</div><div class="subtitle">Gestão dos restaurantes que usam o robô</div></div>
+      <div class="who"><span class="nm" id="whoName">admin@robo.com</span><button class="btn-out" id="logoutBtn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg> Sair</button></div>
+    </header>
+
+    <main class="stage">
+      <div class="kpis">
+        <div class="kpi"><div class="label"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4F46E5" stroke-width="2" stroke-linecap="round"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg> Restaurantes</div><div class="value" id="kTotal">0</div></div>
+        <div class="kpi"><div class="label"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#D97706" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> Vencem em breve</div><div class="value" id="kSoon">0</div></div>
+        <div class="kpi ok"><div class="label"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16A34A" stroke-width="2" stroke-linecap="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg> Liberados</div><div class="value" id="kOk">0</div></div>
+        <div class="kpi danger"><div class="label"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#DC2626" stroke-width="2" stroke-linecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Bloqueados/Vencidos</div><div class="value" id="kBad">0</div></div>
+      </div>
+
+      <div class="layout">
+        <div class="card">
+          <div class="card-h"><h2>Restaurantes</h2><button class="btn-add-top" id="addBtn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Adicionar</button></div>
+          <div class="search"><input id="searchInput" placeholder="Buscar restaurante…" /></div>
+          <div id="restList"></div>
+        </div>
+
+        <div class="card" id="detailCard">
+          <div class="card-h"><h2 id="detailTitle">Detalhes</h2></div>
+          <div id="detailBody">
+            <div class="detail-empty">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#CBD5E1" stroke-width="1.6" stroke-linecap="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+              <div>Selecione um restaurante ou clique em <b>Adicionar</b>.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+<script>
+/* =========================================================
+   PAINEL DO CRIADOR — v2
+   + adicionar/remover restaurantes
+   + controle manual de acesso: liberar X dias / bloquear robô
+   Persistência: localStorage 'criador_tenants_v1'
+   O bloqueio reflete no robô (index.html lê o mesmo storage).
+   ========================================================= */
+const CRED={email:'admin@robo.com',senha:'1234'};
+const COLORS=['#4F46E5','#EA580C','#16A34A','#0EA5E9','#DB2777','#7C3AED','#0891B2','#CA8A04'];
+const TSTORE='criador_tenants_v1';
+const DAY=86400000;
+
+const $=s=>document.querySelector(s);
+const esc=s=>(s+'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const brl=v=>(+v).toFixed(2).replace('.',',');
+const initials=n=>n.split(' ').filter(Boolean).slice(0,2).map(w=>w[0]).join('').toUpperCase()||'?';
+const colorOf=id=>COLORS[(id-1)%COLORS.length];
+function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),2200);}
+function addDaysISO(n){const d=new Date();d.setHours(0,0,0,0);return new Date(d.getTime()+n*DAY).toISOString().slice(0,10);}
+function daysLeft(iso){if(!iso)return null;const d=new Date(iso+'T00:00:00');const t=new Date();t.setHours(0,0,0,0);return Math.round((d-t)/DAY);}
+function fmtDate(iso){if(!iso)return '—';const p=iso.split('-');return p[2]+'/'+p[1]+'/'+p[0];}
+
+/* ---------- dados ---------- */
+function seedTenants(){return[
+  {id:1,nome:'Marmitaria Sabor Caseiro',dono:'José Almeida',cidade:'São Paulo - SP',tel:'(11) 98765-4321',plano:'Pro',valor:149,desde:'jan/2026',pedidosMes:312,bloqueado:false,liberadoAte:addDaysISO(27),hist:[['+30 dias liberados',fmtDate(addDaysISO(-3))],['+30 dias liberados',fmtDate(addDaysISO(-33))]]},
+  {id:2,nome:'Cantinho da Marmita',dono:'Rita Souza',cidade:'Campinas - SP',tel:'(19) 99812-3344',plano:'Básico',valor:89,desde:'mar/2026',pedidosMes:96,bloqueado:false,liberadoAte:addDaysISO(-11),hist:[['+30 dias liberados',fmtDate(addDaysISO(-41))]]},
+  {id:3,nome:'Marmitas Express',dono:'Paulo Henrique',cidade:'Santo André - SP',tel:'(11) 97001-2200',plano:'Pro',valor:149,desde:'fev/2026',pedidosMes:248,bloqueado:false,liberadoAte:addDaysISO(3),hist:[['+30 dias liberados',fmtDate(addDaysISO(-27))]]},
+  {id:4,nome:'Tempero da Vó',dono:'Cleusa Martins',cidade:'Guarulhos - SP',tel:'(11) 96540-8899',plano:'Básico',valor:89,desde:'dez/2025',pedidosMes:140,bloqueado:false,liberadoAte:addDaysISO(25),hist:[['+30 dias liberados',fmtDate(addDaysISO(-5))]]},
+  {id:5,nome:'Marmita Fit Saudável',dono:'André Lima',cidade:'São Bernardo - SP',tel:'(11) 95123-7766',plano:'Pro',valor:149,desde:'jan/2026',pedidosMes:205,bloqueado:true,liberadoAte:addDaysISO(15),hist:[['Robô bloqueado',fmtDate(addDaysISO(-1))],['+30 dias liberados',fmtDate(addDaysISO(-16))]]},
+];}
+let TENANTS; try{TENANTS=JSON.parse(localStorage.getItem(TSTORE))||seedTenants();}catch(e){TENANTS=seedTenants();}
+let _tid=Math.max(0,...TENANTS.map(t=>t.id));
+const saveTenants=()=>{try{localStorage.setItem(TSTORE,JSON.stringify(TENANTS));}catch(e){}};
+
+/* ---------- status de acesso ---------- */
+function accessStatus(t){
+  if(t.bloqueado)return['Bloqueado','danger'];
+  const dl=daysLeft(t.liberadoAte);
+  if(dl===null)return['Sem acesso','slate'];
+  if(dl<0)return['Vencido','danger'];
+  if(dl<=5)return['Vence em '+dl+'d','warn'];
+  return['Liberado · '+dl+'d','ok'];
+}
+const isActive=t=>!t.bloqueado&&daysLeft(t.liberadoAte)>=0;
+
+let selectedId=null,filter='',mode='empty',confirmRemove=false;
+
+/* ---------- LOGIN ---------- */
+function doLogin(){
+  const email=$('#email').value.trim().toLowerCase(),senha=$('#senha').value;
+  if(email===CRED.email&&senha===CRED.senha){sessionStorage.setItem('criador_logado','1');$('#whoName').textContent=email;enterApp();}
+  else $('#loginErr').classList.add('show');
+}
+$('#loginForm').addEventListener('submit',e=>{e.preventDefault();doLogin();});
+$('#email').addEventListener('input',()=>$('#loginErr').classList.remove('show'));
+$('#senha').addEventListener('input',()=>$('#loginErr').classList.remove('show'));
+$('#logoutBtn').onclick=()=>{sessionStorage.removeItem('criador_logado');location.reload();};
+function enterApp(){$('#loginView').style.display='none';$('#appView').style.display='block';renderKPIs();renderList();renderDetail();}
+
+/* ---------- KPIs ---------- */
+function renderKPIs(){
+  $('#kTotal').textContent=TENANTS.length;
+  $('#kSoon').textContent=TENANTS.filter(t=>{const d=daysLeft(t.liberadoAte);return !t.bloqueado&&d!==null&&d>=0&&d<=5;}).length;
+  $('#kOk').textContent=TENANTS.filter(isActive).length;
+  $('#kBad').textContent=TENANTS.filter(t=>!isActive(t)).length;
+}
+
+/* ---------- LISTA ---------- */
+$('#searchInput').addEventListener('input',e=>{filter=e.target.value.toLowerCase();renderList();});
+$('#addBtn').onclick=()=>{mode='add';selectedId=null;confirmRemove=false;renderList();renderDetail();};
+function renderList(){
+  const box=$('#restList');
+  const list=TENANTS.filter(t=>t.nome.toLowerCase().includes(filter)||t.cidade.toLowerCase().includes(filter));
+  if(!list.length){box.innerHTML='<div class="detail-empty" style="padding:30px">Nenhum restaurante.</div>';return;}
+  box.innerHTML=list.map(t=>{const[lbl,cls]=accessStatus(t);return `<div class="rest-row ${t.id===selectedId?'active':''}" data-id="${t.id}">
+    <div class="rest-av" style="background:${colorOf(t.id)}">${esc(initials(t.nome))}</div>
+    <div class="rest-main"><div class="rest-name">${esc(t.nome)}</div><div class="rest-meta">${esc(t.cidade)}</div></div>
+    <div class="rest-right"><span class="chip ${cls}">${lbl}</span></div></div>`;}).join('');
+  box.querySelectorAll('.rest-row').forEach(r=>r.onclick=()=>{selectedId=+r.dataset.id;mode='view';confirmRemove=false;renderList();renderDetail();});
+}
+
+/* ---------- DETALHE ---------- */
+function renderDetail(){
+  const body=$('#detailBody');
+  if(mode==='add'){renderAddForm(body);$('#detailTitle').textContent='Novo restaurante';return;}
+  $('#detailTitle').textContent='Detalhes';
+  const t=TENANTS.find(x=>x.id===selectedId);
+  if(!t){body.innerHTML='<div class="detail-empty"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#CBD5E1" stroke-width="1.6" stroke-linecap="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg><div>Selecione um restaurante ou clique em <b>Adicionar</b>.</div></div>';return;}
+  const[lbl,cls]=accessStatus(t);const dl=daysLeft(t.liberadoAte);
+  body.innerHTML=`<div style="padding:18px">
+    <div class="det-head"><div class="det-av" style="background:${colorOf(t.id)}">${esc(initials(t.nome))}</div><div style="flex:1"><div class="det-name">${esc(t.nome)}</div><div class="det-meta">${esc(t.cidade)}</div></div><span class="chip ${cls}">${lbl}</span></div>
+
+    <div class="access-box">
+      <div class="access-top">
+        <div class="rest-av" style="width:38px;height:38px;border-radius:10px;background:${t.bloqueado?'var(--danger-soft)':'var(--ok-soft)'};color:${t.bloqueado?'var(--danger)':'var(--ok)'}">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${t.bloqueado?'<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>':'<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/>'}</svg>
+        </div>
+        <div style="flex:1"><div class="big">${t.bloqueado?'Robô bloqueado':(dl!==null&&dl>=0?'Liberado por '+dl+' dia(s)':'Acesso vencido')}</div><div class="small">${t.bloqueado?'O robô não atende este restaurante.':(t.liberadoAte?'Liberado até '+fmtDate(t.liberadoAte):'Defina um período abaixo.')}</div></div>
+      </div>
+      ${t.bloqueado?'':`<div class="liberar-row">
+        <input id="diasInput" type="number" min="1" value="30" />
+        <span style="font-size:13px;color:var(--muted)">dias</span>
+        <button class="btn btn-ok" id="liberarBtn" style="flex:1"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg> Liberar acesso</button>
+      </div>
+      <div class="chips-dias"><button class="chip-dia" data-d="7">+7</button><button class="chip-dia" data-d="15">+15</button><button class="chip-dia" data-d="30">+30</button><button class="chip-dia" data-d="90">+90</button></div>`}
+      <div style="margin-top:12px">
+        ${t.bloqueado
+          ?'<button class="btn btn-ok btn-block" id="unblockBtn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg> Desbloquear robô</button>'
+          :'<button class="btn btn-danger btn-block" id="blockBtn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Bloquear robô</button>'}
+      </div>
+    </div>
+
+    <div class="det-stats">
+      <div class="stat"><div class="l">Pedidos no mês</div><div class="v">${t.pedidosMes||0}</div></div>
+      <div class="stat"><div class="l">Cliente desde</div><div class="v" style="font-size:14px">${esc(t.desde||'—')}</div></div>
+    </div>
+
+    <p class="sec-title">Histórico de liberações</p>
+    <div class="pay-hist">${(t.hist&&t.hist.length)?t.hist.map(([txt,data])=>`<div class="pay-item"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span class="mes">${esc(txt)}</span><span style="font-size:11.5px;color:var(--faint)">${esc(data)}</span></div>`).join(''):'<div class="pay-item"><span class="mes" style="color:var(--faint)">Sem registros.</span></div>'}</div>
+
+    <p class="sec-title">Contato</p>
+    <div class="contact">
+      <div><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> ${esc(t.dono||'—')}</div>
+      <div><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg> ${esc(t.tel||'—')}</div>
+    </div>
+
+    <div class="det-actions">
+      <a class="btn btn-ghost" href="index.html" target="_blank"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg> Abrir painel</a>
+      ${confirmRemove
+        ?'<button class="btn btn-danger" id="rmConfirm">Confirmar remoção</button><button class="btn btn-ghost" id="rmCancel">Cancelar</button>'
+        :'<button class="btn btn-ghost" id="rmBtn" style="color:var(--danger)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg> Remover</button>'}
+    </div>
+  </div>`;
+
+  // binds
+  const lib=$('#liberarBtn'); if(lib) lib.onclick=()=>liberar(t,parseInt($('#diasInput').value)||30);
+  body.querySelectorAll('.chip-dia').forEach(c=>c.onclick=()=>{$('#diasInput').value=c.dataset.d;});
+  const bb=$('#blockBtn'); if(bb) bb.onclick=()=>{t.bloqueado=true;t.hist.unshift(['Robô bloqueado',fmtDate(addDaysISO(0))]);saveTenants();renderKPIs();renderList();renderDetail();toast('Robô bloqueado 🔒');};
+  const ub=$('#unblockBtn'); if(ub) ub.onclick=()=>{t.bloqueado=false;t.hist.unshift(['Robô desbloqueado',fmtDate(addDaysISO(0))]);saveTenants();renderKPIs();renderList();renderDetail();toast('Robô desbloqueado ✓');};
+  const rb=$('#rmBtn'); if(rb) rb.onclick=()=>{confirmRemove=true;renderDetail();};
+  const rc=$('#rmCancel'); if(rc) rc.onclick=()=>{confirmRemove=false;renderDetail();};
+  const rco=$('#rmConfirm'); if(rco) rco.onclick=()=>removeTenant(t.id);
+}
+function liberar(t,dias){
+  t.liberadoAte=addDaysISO(dias);t.bloqueado=false;
+  t.hist.unshift(['+'+dias+' dias liberados',fmtDate(addDaysISO(0))]);
+  saveTenants();renderKPIs();renderList();renderDetail();toast('Liberado por '+dias+' dias ✓');
+}
+function removeTenant(id){
+  TENANTS=TENANTS.filter(t=>t.id!==id);saveTenants();
+  selectedId=null;mode='empty';confirmRemove=false;
+  renderKPIs();renderList();renderDetail();toast('Restaurante removido');
+}
+
+/* ---------- ADICIONAR ---------- */
+function renderAddForm(body){
+  body.innerHTML=`<div class="add-form">
+    <div class="field"><label>Nome do restaurante *</label><input id="aNome" placeholder="Ex.: Cantina da Praça" /></div>
+    <div class="grid2">
+      <div class="field"><label>Dono</label><input id="aDono" placeholder="Nome do responsável" /></div>
+      <div class="field"><label>Telefone</label><input id="aTel" placeholder="(11) 9...." /></div>
+    </div>
+    <div class="field"><label>Cidade</label><input id="aCidade" placeholder="Cidade - UF" /></div>
+    <div class="field"><label>Liberar acesso por (dias)</label><input id="aDias" type="number" min="1" value="30" /></div>
+    <div class="det-actions" style="margin-top:6px">
+      <button class="btn btn-primary" id="saveNew"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M20 6 9 17l-5-5"/></svg> Salvar restaurante</button>
+      <button class="btn btn-ghost" id="cancelNew">Cancelar</button>
+    </div>
+  </div>`;
+  $('#saveNew').onclick=()=>{
+    const nome=$('#aNome').value.trim();
+    if(!nome){$('#aNome').focus();$('#aNome').style.borderColor='var(--danger)';return;}
+    const dias=parseInt($('#aDias').value)||30;
+    const t={id:++_tid,nome,dono:$('#aDono').value.trim(),cidade:$('#aCidade').value.trim()||'—',tel:$('#aTel').value.trim(),
+      desde:new Date().toLocaleDateString('pt-BR',{month:'short',year:'numeric'}),
+      pedidosMes:0,bloqueado:false,liberadoAte:addDaysISO(dias),hist:[['+'+dias+' dias liberados',fmtDate(addDaysISO(0))],['Restaurante cadastrado',fmtDate(addDaysISO(0))]]};
+    TENANTS.push(t);saveTenants();selectedId=t.id;mode='view';
+    renderKPIs();renderList();renderDetail();toast('Restaurante adicionado ✓');
+  };
+  $('#cancelNew').onclick=()=>{mode=selectedId?'view':'empty';renderDetail();};
+}
+
+/* ---------- restaurante demo sempre disponível ---------- */
+function ensureDemo(){
+  if(!TENANTS.some(t=>t.id===1)){
+    TENANTS.unshift({id:1,nome:'Marmitaria Sabor Caseiro',dono:'José Almeida',cidade:'São Paulo - SP',tel:'(11) 98765-4321',plano:'Pro',valor:149,desde:'jan/2026',pedidosMes:312,bloqueado:false,liberadoAte:addDaysISO(30),hist:[['Restaurante demo disponível',fmtDate(addDaysISO(0))]]});
+    _tid=Math.max(_tid,...TENANTS.map(t=>t.id));saveTenants();
+  }
+}
+ensureDemo();
+
+/* ---------- BOOT ---------- */
+if(sessionStorage.getItem('criador_logado')==='1'){enterApp();}
+</script>
+</body>
+</html>
