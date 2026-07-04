@@ -99,6 +99,8 @@
   .cfg-sub.beb{margin-top:20px;padding-top:18px;border-top:1px solid var(--line);}
   .cfg-sub.beb svg{color:#0EA5E9;}
   .etq-P{background:#EEF2FF;color:#4F46E5;}.etq-M{background:#FFFBEB;color:#B45309;}.etq-G{background:#F0FDF4;color:#16A34A;}
+  .msg .etq{display:inline-block;border-radius:999px;padding:1px 8px;margin:0 1px;vertical-align:1px;}
+  #cfgTaxaFixa.off{opacity:.45;pointer-events:none;user-select:none;}
   .order-empty{font-size:13px;color:var(--faint);text-align:center;padding:14px 0;}
   .order-foot{margin-top:6px;padding-top:14px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:11px;}
   .info-line{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);}
@@ -518,8 +520,11 @@
               <div class="field"><label>Horário de funcionamento</label><input id="cfgHorario" /></div>
               <div class="field"><label>Tempo de entrega</label><input id="cfgTempo" placeholder="ex.: 40 min" /></div>
             </div>
-            <div class="toggle-row"><div class="tt"><div class="h">Entrega grátis</div><div class="s">Quando ativo, a taxa de entrega fica R$ 0,00.</div></div><div class="switch" id="cfgGratis"></div></div>
-            <div class="field"><label>Taxa de entrega (R$)</label><input id="cfgTaxa" type="number" min="0" step="0.5" /></div>
+            <div class="note-box" id="cfgTaxaFixaHint" style="display:none;margin-bottom:12px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex:none;margin-top:1px"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg><span><b>Entrega dinâmica ativa</b> — a taxa é calculada pelas regiões do mapa. Para usar taxa fixa, desative-a na aba Mapas.</span></div>
+            <div id="cfgTaxaFixa">
+              <div class="toggle-row"><div class="tt"><div class="h">Entrega grátis</div><div class="s">Quando ativo, a taxa de entrega fica R$ 0,00.</div></div><div class="switch" id="cfgGratis"></div></div>
+              <div class="field"><label>Taxa de entrega (R$)</label><input id="cfgTaxa" type="number" min="0" step="0.5" /></div>
+            </div>
           </div>
         </div>
 
@@ -677,7 +682,9 @@ function parseQty(c){
 }
 function parseNote(c){const tr=['sem ','com ','bem ','mal ','pouco ','muito ','extra ','capricha','no ponto','ao ponto','bem passad','mal passad'];let idx=-1;for(const t of tr){const i=c.indexOf(t);if(i>=0&&(idx<0||i<idx))idx=i;}return idx>=0?c.slice(idx).trim():null;}
 function parseOrder(text){const t=text.toLowerCase();const chunks=t.split(/\s+e\s+|,|\+|\/|\bmais\b/);const out=[];for(let c of chunks){c=c.trim();if(!c)continue;const it=matchItem(c);if(!it)continue;out.push({id:it.id,nome:it.nome,preco:it.preco,etiqueta:it.etiqueta,qtd:parseQty(c),note:parseNote(c)});}return out;}
-const describe=items=>items.map(i=>`• ${i.qtd}× ${i.nome}${i.note?' ('+i.note+')':''}`).join('\n');
+const describe=items=>items.map(i=>`• ${i.qtd}× ${i.nome}${i.etiqueta?' {{etq:'+i.etiqueta+'}}':''}${i.note?' ('+i.note+')':''}`).join('\n');
+// remove os marcadores {{etq:…}} quando o texto vai para fora do chat (inbox, export)
+const plainEtq=s=>(s+'').replace(/\{\{etq:([^}]+)\}\}/g,'($1)');
 
 /* ---------- conversas ---------- */
 const CLIENTES=[['Maria Silva','MS'],['João Pereira','JP'],['Ana Costa','AC'],['Carlos Souza','CS'],['Beatriz Lima','BL'],['Rafael Alves','RA'],['Lucas Rocha','LR'],['Paula Dias','PD']];
@@ -688,7 +695,8 @@ function buildBubble(who,text,time){
   let tag='';
   if(who==='bot')tag='<span class="tag"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="9" width="16" height="11" rx="2"/><circle cx="12" cy="4" r="2"/></svg>IA</span>';
   if(who==='agent')tag='<span class="tag"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="8" r="4"/><path d="M4 20a8 8 0 0 1 16 0z"/></svg>Atendente</span>';
-  return `<div class="msg ${who}">${tag}${esc(text).replace(/\n/g,'<br>')}<span class="t">${time||now()}</span></div>`;
+  const body=esc(text).replace(/\{\{etq:([^}]+)\}\}/g,(_,e)=>`<span class="etq etq-${e}">${e}</span>`).replace(/\n/g,'<br>');
+  return `<div class="msg ${who}">${tag}${body}<span class="t">${time||now()}</span></div>`;
 }
 function newConv(seed){const[n,i]=CLIENTES[Math.floor(Math.random()*CLIENTES.length)];const tel=`(11) 9${Math.floor(1000+Math.random()*8999)}-${Math.floor(1000+Math.random()*8999)}`;const c=Object.assign({id:++cseq,nome:n,ini:i,phone:tel,step:'menu',cart:[],endereco:null,pagamento:null,pagStatus:null,humano:false,typing:false,messages:[],unread:0,lastAt:Date.now()},seed||{});convs.push(c);return c;}
 function pushMsg(c,who,text){c.messages.push({who,text,time:now()});c.lastAt=Date.now();if(c.id!==currentId&&who!=='cust')c.unread++;renderInbox();if(c.id===currentId){renderConversa();}if(typeof salvarChatsLog==='function')salvarChatsLog();}
@@ -711,7 +719,7 @@ const linhaEntrega=c=>{if(R().entregaGratis)return 'Entrega: grátis';if(entrega
 function blocoTotal(c){const sub=orderTotal(c);if(entregaPendente(c))return `*Subtotal: R$ ${brl(sub)}* _(+ entrega conforme o endereço)_`;return `*Total: R$ ${brl(sub+taxa(c))}*`;}
 
 /* ---------- fluxo ---------- */
-const menuTxt=()=>'Cardápio de hoje 🍽️\n'+R().cardapio.map(i=>`• ${i.nome}${i.etiqueta?' ('+i.etiqueta+')':''} — R$ ${brl(i.preco)}`).join('\n')+'\n\nÉ só me dizer o que quer.';
+const menuTxt=()=>'Cardápio de hoje 🍽️\n'+R().cardapio.map(i=>`• ${i.nome}${i.etiqueta?' {{etq:'+i.etiqueta+'}}':''} — R$ ${brl(i.preco)}`).join('\n')+'\n\nÉ só me dizer o que quer.';
 const menuShort=()=>R().cardapio.map(i=>i.nome).join(', ');
 function greet(c){c.step='menu';botSay(c,`Olá! 👋 Sou o robô da *${R().nome}*.\nÉ só me dizer seu pedido ou escolher:\n\n*1* — Ver cardápio\n*2* — Fazer pedido\n*3* — Falar com atendente`,500);}
 const opcoes=()=>'*1* — Ver cardápio\n*2* — Fazer pedido\n*3* — Falar com atendente';
@@ -988,7 +996,7 @@ function salvarChatsLog(){
     const log=convs.map(c=>({id:c.id,nome:c.nome,phone:c.phone,quando:c.alertAt||Date.now(),
       sinalizado:!!c.sinalizado,querAtendente:!!c.querAtendente,motivo:c.alertMotivo||null,
       endereco:c.endereco||null,total:c.cart?c.cart.reduce((s,i)=>s+i.preco*i.qtd,0):0,
-      mensagens:(c.messages||[]).map(m=>({who:m.who,text:m.text,time:m.time}))}));
+      mensagens:(c.messages||[]).map(m=>({who:m.who,text:plainEtq(m.text),time:m.time}))}));
     localStorage.setItem(CHATS_KEY,JSON.stringify({geradoEm:new Date().toISOString(),conversas:log}));
   }catch(e){}
 }
@@ -1046,7 +1054,7 @@ function convStatus(c){
   if(c.cart.length)return['Montando pedido','primary'];
   return['Conversando','slate'];
 }
-const lastLine=c=>{const m=c.messages[c.messages.length-1];if(!m)return'Nova conversa';const p=m.who==='bot'?'Robô: ':m.who==='agent'?'Você: ':'';return p+m.text.split('\n')[0];};
+const lastLine=c=>{const m=c.messages[c.messages.length-1];if(!m)return'Nova conversa';const p=m.who==='bot'?'Robô: ':m.who==='agent'?'Você: ':'';return p+plainEtq(m.text.split('\n')[0]);};
 
 /* ---------- render atendimento ---------- */
 function renderInbox(){
@@ -1102,7 +1110,15 @@ function renderConfig(){
   $('#cfgNome').value=draft.nome;$('#cfgPix').value=draft.pixKey;$('#cfgHorario').value=draft.horario;$('#cfgTempo').value=draft.tempoEntrega||'';
   $('#cfgTaxa').value=draft.entregaGratis?0:draft.taxaEntrega;$('#cfgTaxa').disabled=!!draft.entregaGratis;
   $('#cfgGratis').classList.toggle('on',!!draft.entregaGratis);
+  syncTaxaFixa();
   renderMenu();renderPecs();renderAiPreview();
+}
+// entrega dinâmica (Mapas) ligada → taxa fixa/entrega grátis ficam inativas na Configuração
+function syncTaxaFixa(){
+  const off=!!mapaCfg().entregaDinamica;
+  $('#cfgTaxaFixa').classList.toggle('off',off);
+  $('#cfgTaxaFixaHint').style.display=off?'flex':'none';
+  if(off)$('#cfgTaxa').disabled=true;
 }
 $('#cfgNome').addEventListener('input',e=>{draft.nome=e.target.value;markDirty();});
 $('#cfgPix').addEventListener('input',e=>{draft.pixKey=e.target.value;markDirty();});
@@ -1539,7 +1555,7 @@ function seed(){
   const ana=newConv({nome:'Ana Costa',ini:'AC',step:'comprovante',
     cart:[{id:2,nome:'Marmita de Carne',preco:20,etiqueta:'G',qtd:1,note:'sem cebola'},{id:4,nome:'Pepsi',preco:6,etiqueta:'lata',qtd:1,note:null}],
     endereco:'Av. Brasil, 880 - Vila Nova',pagamento:'Pix',pagStatus:'comprovante',unread:1,
-    messages:[{who:'bot',text:'Olá! 👋 Sou o robô da Marmitaria Sabor Caseiro.',time:'12:31'},{who:'cust',text:'uma marmita de carne sem cebola e uma pepsi',time:'12:32'},{who:'bot',text:'Anotado! ✅\n• 1× Marmita de Carne (sem cebola)\n• 1× Pepsi',time:'12:32'},{who:'cust',text:'Av. Brasil, 880 - Vila Nova. Pix',time:'12:33'},{who:'bot',text:'Pedido registrado! Chave Pix: marmitaria@sabor.com. Me envie o comprovante 🧾',time:'12:33'},{who:'cust',text:'enviei o comprovante 🧾',time:'12:35'},{who:'bot',text:'Recebi seu comprovante! 🧾 Vou validar e já confirmo. 😊',time:'12:35'}]});
+    messages:[{who:'bot',text:'Olá! 👋 Sou o robô da Marmitaria Sabor Caseiro.',time:'12:31'},{who:'cust',text:'uma marmita de carne sem cebola e uma pepsi',time:'12:32'},{who:'bot',text:'Anotado! ✅\n• 1× Marmita de Carne {{etq:G}} (sem cebola)\n• 1× Pepsi {{etq:lata}}',time:'12:32'},{who:'cust',text:'Av. Brasil, 880 - Vila Nova. Pix',time:'12:33'},{who:'bot',text:'Pedido registrado! Chave Pix: marmitaria@sabor.com. Me envie o comprovante 🧾',time:'12:33'},{who:'cust',text:'enviei o comprovante 🧾',time:'12:35'},{who:'bot',text:'Recebi seu comprovante! 🧾 Vou validar e já confirmo. 😊',time:'12:35'}]});
   newConv({nome:'Carlos Souza',ini:'CS',step:'concluido',cart:[{id:1,nome:'Marmita de Frango',preco:18,etiqueta:'M',qtd:2,note:null}],endereco:'Rua 7 de Setembro, 45',pagamento:'Dinheiro',pagStatus:'na_entrega',
     messages:[{who:'bot',text:'Olá! 👋 Como posso ajudar?',time:'12:40'},{who:'cust',text:'2 marmitas de frango',time:'12:41'},{who:'bot',text:'Anotado! ✅\n• 2× Marmita de Frango\n\nDeseja adicionar mais alguma coisa? (sim / não)',time:'12:41'},{who:'cust',text:'não, pode fechar',time:'12:42'},{who:'bot',text:'Perfeito! 📍 Qual o endereço de entrega?',time:'12:42'},{who:'cust',text:'Rua 7 de Setembro, 45 — dinheiro',time:'12:42'},{who:'bot',text:'Pedido confirmado! 🎉 Total R$ 41,00 — Dinheiro. Pagamento na entrega.',time:'12:42'}]});
   totals.pedidos=2;totals.faturamento=(20+6+taxa())+(18*2+taxa());updateKPIs();
