@@ -43,9 +43,12 @@
 
   .stage{max-width:980px;margin:0 auto;padding:24px;}
   .panel{display:flex;flex-direction:column;gap:18px;}
-  .tabs{display:flex;gap:6px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);padding:5px;box-shadow:var(--shadow-sm);}
-  .tab{flex:1;display:inline-flex;align-items:center;justify-content:center;gap:8px;font-weight:600;font-size:13.5px;color:var(--muted);padding:9px;border-radius:var(--r-sm);transition:background .15s,color .15s;}
-  .tab.active{background:var(--primary);color:#fff;}.tab:not(.active):hover{background:var(--bg);}
+  .tabs{display:flex;gap:6px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);padding:5px;box-shadow:var(--shadow-sm);position:relative;}
+  .tab{flex:1;display:inline-flex;align-items:center;justify-content:center;gap:8px;font-weight:600;font-size:13.5px;color:var(--muted);padding:9px;border-radius:var(--r-sm);transition:background .15s,color .25s var(--ease);position:relative;z-index:1;}
+  .tab.active{background:transparent;color:#fff;}.tab:not(.active):hover{background:var(--bg);}
+  /* pílula que desliza até a aba ativa (estilo Apple: mola suave, preenche e assenta) */
+  .tab-ink{position:absolute;top:5px;bottom:5px;left:5px;width:0;border-radius:var(--r-sm);background:var(--primary);box-shadow:0 2px 10px rgba(79,70,229,.30);transition:left .45s var(--spring),width .45s var(--spring);z-index:0;}
+  .tab-ink.no-anim{transition:none;}
 
   .kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
   .kpi{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:16px;box-shadow:var(--shadow-sm);}
@@ -391,6 +394,7 @@
   <main class="stage">
     <div class="panel" aria-label="Painel do dono">
       <div class="tabs">
+        <div class="tab-ink" id="tabInk"></div>
         <button class="tab active" id="tabAtBtn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Atendimento</button>
         <button class="tab" id="tabPedBtn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg> Pedidos</button>
         <button class="tab" id="tabMapBtn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg> Mapas</button>
@@ -1333,10 +1337,22 @@ function showTab(which){
   $('#tabPedBtn').classList.toggle('active',which==='ped');
   $('#tabMapBtn').classList.toggle('active',which==='mapa');
   $('#tabCfgBtn').classList.toggle('active',which==='cfg');
+  moveTabInk();
   if(which==='cfg')enterConfig();
   if(which==='ped')renderPedidos();
   if(which==='mapa'){renderMapaCtrl();setTimeout(initMapa,60);}
 }
+// posiciona a pílula sob a aba ativa; instant=true pula a animação (carga inicial / resize)
+function moveTabInk(instant){
+  const ink=$('#tabInk');const el=document.querySelector('.tabs .tab.active');
+  if(!ink||!el)return;
+  if(instant)ink.classList.add('no-anim');
+  ink.style.left=el.offsetLeft+'px';ink.style.width=el.offsetWidth+'px';
+  if(instant){void ink.offsetWidth;ink.classList.remove('no-anim');}
+}
+window.addEventListener('resize',()=>moveTabInk(true));
+window.addEventListener('load',()=>moveTabInk(true));
+moveTabInk(true);
 $('#tabAtBtn').onclick=()=>showTab('at');
 $('#tabPedBtn').onclick=()=>showTab('ped');
 $('#tabMapBtn').onclick=()=>showTab('mapa');
