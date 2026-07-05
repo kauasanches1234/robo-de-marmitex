@@ -50,6 +50,20 @@
   .tab-ink{position:absolute;top:5px;bottom:5px;left:5px;width:0;border-radius:var(--r-sm);background:var(--primary);box-shadow:0 2px 10px rgba(79,70,229,.30);transition:left .45s var(--spring),width .45s var(--spring);z-index:0;}
   .tab-ink.no-anim{transition:none;}
 
+  /* aba Clientes */
+  .cli-row{display:flex;align-items:center;gap:12px;padding:12px 18px;border-bottom:1px solid var(--line);}
+  .cli-row:last-child{border-bottom:none;}
+  .cli-av{width:38px;height:38px;border-radius:50%;background:var(--primary-soft);color:var(--primary);font-weight:700;font-size:13px;display:grid;place-items:center;flex:none;}
+  .cli-main{flex:1;min-width:0;}
+  .cli-nome{font-weight:600;font-size:13.5px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;}
+  .cli-tel{font-size:12px;color:var(--faint);}
+  .cli-badge{font-size:10px;font-weight:800;padding:2px 8px;border-radius:999px;letter-spacing:.02em;}
+  .cli-badge.sis{background:var(--primary-soft);color:var(--primary);}
+  .cli-badge.wa{background:#DCFCE7;color:#16A34A;}
+  .cli-meta{text-align:right;font-size:12px;color:var(--muted);flex:none;}
+  .cli-meta b{display:block;font-size:13px;color:var(--ink);}
+  .cli-empty{padding:26px 18px;text-align:center;color:var(--faint);font-size:13px;}
+
   .kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
   .kpi{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:16px;box-shadow:var(--shadow-sm);}
   .kpi .label{font-size:12px;color:var(--muted);font-weight:600;display:flex;align-items:center;gap:6px;}
@@ -272,7 +286,7 @@
   .field input:disabled{background:var(--bg);color:var(--faint);}
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
   .toggle-row{display:flex;align-items:center;gap:12px;padding:11px 13px;background:var(--bg);border-radius:var(--r-sm);margin-bottom:12px;}
-  .toggle-row .tt{flex:1;}.toggle-row .tt .h{font-weight:700;font-size:13.5px;}.toggle-row .tt .s{font-size:12px;color:var(--faint);}
+  .toggle-row .tt{flex:1;}.toggle-row .tt .h{font-weight:700;font-size:13.5px;}.toggle-row .tt .s{font-size:11px;line-height:1.5;color:var(--faint);}
   .switch{width:46px;height:27px;border-radius:999px;background:#CBD5E1;position:relative;flex:none;transition:background .18s;}
   .switch.on{background:var(--ok);}
   .switch::after{content:"";position:absolute;top:3px;left:3px;width:21px;height:21px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.2);transition:left .18s;}
@@ -397,6 +411,7 @@
         <div class="tab-ink" id="tabInk"></div>
         <button class="tab active" id="tabAtBtn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Atendimento</button>
         <button class="tab" id="tabPedBtn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg> Pedidos</button>
+        <button class="tab" id="tabCliBtn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> Clientes</button>
         <button class="tab" id="tabMapBtn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg> Mapas</button>
         <button class="tab" id="tabCfgBtn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> Configuração</button>
       </div>
@@ -410,7 +425,7 @@
         </div>
 
         <div class="card" id="inboxCard">
-          <div class="card-h"><div class="ico-box" style="background:#DCFCE7"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="#16A34A" stroke-width="2" stroke-linecap="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8z"/></svg></div><h3>Conversas</h3><button class="btn-export" id="exportChatsBtn" title="Baixar todas as conversas (.json) para análise"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Exportar</button><button class="btn-new" id="newConvBtn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Nova</button></div>
+          <div class="card-h"><div class="ico-box" style="background:#DCFCE7"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="#16A34A" stroke-width="2" stroke-linecap="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8z"/></svg></div><h3>Conversas</h3><button class="btn-new" id="newConvBtn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Nova</button></div>
           <div class="inbox" id="inbox"></div>
         </div>
 
@@ -462,6 +477,33 @@
           <button class="btn-fin" id="limparBtn" title="Remove da lista os pedidos finalizados (motoboy a caminho)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg> Limpar</button>
         </div>
         <div id="pedList" style="display:flex;flex-direction:column;gap:14px;"></div>
+      </div>
+
+      <!-- ===== CLIENTES (WhatsApp + base de clientes) ===== -->
+      <div id="tabCli" style="display:none;flex-direction:column;gap:16px;">
+        <div class="card">
+          <div class="card-h">
+            <div class="ico-box" style="background:#DCFCE7"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="#16A34A" stroke-width="2" stroke-linecap="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8z"/></svg></div>
+            <div style="flex:1"><h3>WhatsApp do robô</h3><div class="sub">conecte o número que o robô vai atender</div></div>
+            <span class="chip warn" id="waStatus">Desconectado</span>
+          </div>
+          <div class="card-b" style="display:flex;flex-direction:column;gap:12px;">
+            <div class="note-box"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex:none;margin-top:1px"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg><span><b>Protótipo:</b> a conexão real com o WhatsApp (API oficial) entra na Fase 2. Aqui você já cadastra o número, testa o fluxo e mantém a base de clientes sincronizada.</span></div>
+            <div class="field" style="margin-bottom:0"><label>Número do WhatsApp</label>
+              <div class="addr-set"><input id="waNumero" placeholder="ex.: (11) 99999-0000" autocomplete="off" /><button class="btn-loc" id="waConectarBtn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg> <span id="waConectarTxt">Conectar</span></button></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-h">
+            <div class="ico-box" style="background:var(--primary-soft)"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="#4F46E5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+            <div style="flex:1"><h3>Clientes</h3><div class="sub" id="cliSyncInfo">salvos no sistema e no WhatsApp</div></div>
+            <span class="step-badge" id="cliCount">0</span>
+            <button class="btn-new" id="syncBtn" title="Puxa os clientes das conversas e sincroniza com o WhatsApp"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"/><path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14"/></svg> Sincronizar</button>
+          </div>
+          <div id="cliList"></div>
+        </div>
       </div>
 
       <!-- ===== MAPAS (zonas de entrega) ===== -->
@@ -1121,7 +1163,6 @@ $('#flagSigBtn').onclick=()=>{const c=convById(+$('#flagCard').dataset.cid);sina
 $('#flagGoBtn').onclick=()=>{const id=+$('#flagCard').dataset.cid;if(convById(id))selectConv(id);hideFlagCard();};
 $('#flagCardX').onclick=hideFlagCard;
 $('#alertFlag').onclick=()=>{const c=cur();if(c)showFlagCard(c);};
-$('#exportChatsBtn').onclick=exportarChats;
 function confirmPayment(){const c=cur();if(!c||c.pagStatus!=='comprovante')return;c.pagStatus='confirmado';renderOrder();renderInbox();botSay(c,`Pagamento confirmado! ✅ Seu pedido entrou na fila de preparo. 🍱\nTempo estimado: ${R().tempoEntrega||'40 min'}.`,500);}
 
 /* ---------- envio (cliente ou atendente) ---------- */
@@ -1331,15 +1372,17 @@ function limparPedidos(){
 
 /* ---------- tabs ---------- */
 function showTab(which){
-  const tabs={at:'#tabAt',ped:'#tabPed',mapa:'#tabMap',cfg:'#tabCfg'};
+  const tabs={at:'#tabAt',ped:'#tabPed',cli:'#tabCli',mapa:'#tabMap',cfg:'#tabCfg'};
   for(const k in tabs)$(tabs[k]).style.display=(k===which)?'flex':'none';
   $('#tabAtBtn').classList.toggle('active',which==='at');
   $('#tabPedBtn').classList.toggle('active',which==='ped');
+  $('#tabCliBtn').classList.toggle('active',which==='cli');
   $('#tabMapBtn').classList.toggle('active',which==='mapa');
   $('#tabCfgBtn').classList.toggle('active',which==='cfg');
   moveTabInk();
   if(which==='cfg')enterConfig();
   if(which==='ped')renderPedidos();
+  if(which==='cli')renderClientes();
   if(which==='mapa'){renderMapaCtrl();setTimeout(initMapa,60);}
 }
 // posiciona a pílula sob a aba ativa; instant=true pula a animação (carga inicial / resize)
@@ -1355,9 +1398,50 @@ window.addEventListener('load',()=>moveTabInk(true));
 moveTabInk(true);
 $('#tabAtBtn').onclick=()=>showTab('at');
 $('#tabPedBtn').onclick=()=>showTab('ped');
+$('#tabCliBtn').onclick=()=>showTab('cli');
 $('#tabMapBtn').onclick=()=>showTab('mapa');
 $('#tabCfgBtn').onclick=()=>showTab('cfg');
 $('#limparBtn').onclick=limparPedidos;
+
+/* ===== CLIENTES + WhatsApp (protótipo — API oficial entra na Fase 2) ===== */
+function clientesDB(){if(!DB.clientes)DB.clientes=[];return DB.clientes;}
+function waCfg(){if(!DB.whatsapp)DB.whatsapp={conectado:false,numero:''};return DB.whatsapp;}
+// puxa clientes das conversas (sistema) e, com o WhatsApp conectado, marca-os como sincronizados lá também
+function sincronizarClientes(){
+  const lista=clientesDB();const wa=waCfg();let novos=0;
+  convs.forEach(c=>{
+    if(!c.phone)return;
+    let cli=lista.find(x=>x.phone===c.phone);
+    if(!cli){cli={id:Date.now()+lista.length,nome:c.nome,ini:c.ini,phone:c.phone,whatsapp:false,pedidos:0,gasto:0};lista.push(cli);novos++;}
+    cli.nome=c.nome;cli.ini=c.ini;
+  });
+  // pedidos/gasto por telefone, a partir das conversas com pagamento definido
+  const tot={};
+  convs.forEach(c=>{if(c.pagamento&&c.phone){const t=tot[c.phone]||(tot[c.phone]={p:0,g:0});t.p++;t.g+=orderTotal(c)+taxa(c);}});
+  lista.forEach(cli=>{const t=tot[cli.phone];if(t){cli.pedidos=t.p;cli.gasto=t.g;}if(wa.conectado)cli.whatsapp=true;});
+  DB.cliSyncAt=Date.now();saveDB();renderClientes();
+  toast(`Sincronizado ✓ ${novos} novo(s) · ${lista.length} cliente(s)`+(wa.conectado?' · WhatsApp em dia':''));
+}
+function renderClientes(){
+  const lista=clientesDB();const wa=waCfg();
+  $('#cliCount').textContent=lista.length+(lista.length===1?' cliente':' clientes');
+  const st=$('#waStatus');st.className='chip '+(wa.conectado?'ok':'warn');st.textContent=wa.conectado?'Conectado':'Desconectado';
+  if(document.activeElement!==$('#waNumero'))$('#waNumero').value=wa.numero||'';
+  $('#waConectarTxt').textContent=wa.conectado?'Desconectar':'Conectar';
+  $('#cliSyncInfo').textContent=DB.cliSyncAt?('última sincronização: '+new Date(DB.cliSyncAt).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})):'salvos no sistema e no WhatsApp';
+  $('#cliList').innerHTML=lista.length?lista.map(cli=>`<div class="cli-row"><div class="cli-av">${esc(cli.ini||'?')}</div><div class="cli-main"><div class="cli-nome">${esc(cli.nome)}<span class="cli-badge sis">Sistema</span>${cli.whatsapp?'<span class="cli-badge wa">WhatsApp</span>':''}</div><div class="cli-tel">${esc(cli.phone||'')}</div></div><div class="cli-meta"><b>${cli.pedidos||0} pedido${(cli.pedidos||0)===1?'':'s'}</b>R$ ${brl(cli.gasto||0)}</div></div>`).join(''):'<div class="cli-empty">Nenhum cliente salvo ainda. Toque em <b>Sincronizar</b> para puxar os clientes das conversas.</div>';
+}
+$('#syncBtn').onclick=sincronizarClientes;
+$('#waNumero').addEventListener('input',e=>{waCfg().numero=e.target.value;saveDB();});
+$('#waConectarBtn').onclick=()=>{
+  const wa=waCfg();
+  if(!wa.conectado){
+    const n=$('#waNumero').value.trim();
+    if(!n){toast('Informe o número do WhatsApp 📱');$('#waNumero').focus();return;}
+    wa.numero=n;wa.conectado=true;toast('WhatsApp conectado ✓ (simulação — Fase 2 usa a API oficial)');
+  }else{wa.conectado=false;toast('WhatsApp desconectado');}
+  saveDB();renderClientes();
+};
 
 /* ===== Mapas — zonas de entrega (Leaflet) ===== */
 const ZONA_CORES=['#4F46E5','#16A34A','#EA580C','#0EA5E9','#DB2777','#7C3AED','#CA8A04','#0891B2'];
