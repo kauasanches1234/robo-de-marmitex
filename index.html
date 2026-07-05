@@ -63,6 +63,10 @@
   .cli-meta{text-align:right;font-size:12px;color:var(--muted);flex:none;}
   .cli-meta b{display:block;font-size:13px;color:var(--ink);}
   .cli-empty{padding:26px 18px;text-align:center;color:var(--faint);font-size:13px;}
+  .cli-del{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;color:var(--faint);flex:none;transition:background .15s,color .15s;}
+  .cli-del:hover{background:var(--danger-soft);color:var(--danger);}
+  .add-contact{width:26px;height:26px;border-radius:50%;background:var(--primary-soft);color:var(--primary);display:grid;place-items:center;flex:none;transition:filter .15s;}
+  .add-contact:hover{filter:brightness(.95);}
 
   .kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
   .kpi{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:16px;box-shadow:var(--shadow-sm);}
@@ -794,7 +798,6 @@ const describe=items=>items.map(i=>`• ${i.qtd}× ${i.nome}${i.etiqueta?' {{etq
 const plainEtq=s=>(s+'').replace(/\{\{etq:([^}]+)\}\}/g,'($1)');
 
 /* ---------- conversas ---------- */
-const CLIENTES=[['Maria Silva','MS'],['João Pereira','JP'],['Ana Costa','AC'],['Carlos Souza','CS'],['Beatriz Lima','BL'],['Rafael Alves','RA'],['Lucas Rocha','LR'],['Paula Dias','PD']];
 let convs=[],currentId=null,cseq=0;
 const totals={pedidos:0,faturamento:0};
 const cur=()=>convs.find(c=>c.id===currentId)||null;
@@ -805,7 +808,17 @@ function buildBubble(who,text,time){
   const body=esc(text).replace(/\{\{etq:([^}]+)\}\}/g,(_,e)=>`<span class="etq etq-${e}">${e}</span>`).replace(/\n/g,'<br>');
   return `<div class="msg ${who}">${tag}${body}<span class="t">${time||now()}</span></div>`;
 }
-function newConv(seed){const[n,i]=CLIENTES[Math.floor(Math.random()*CLIENTES.length)];const tel=`(11) 9${Math.floor(1000+Math.random()*8999)}-${Math.floor(1000+Math.random()*8999)}`;const c=Object.assign({id:++cseq,nome:n,ini:i,phone:tel,step:'menu',cart:[],endereco:null,pagamento:null,pagStatus:null,humano:false,typing:false,messages:[],unread:0,lastAt:Date.now()},seed||{});convs.push(c);return c;}
+// conversa nova chega como NÚMERO desconhecido (igual ao WhatsApp); se o telefone já for contato salvo, usa o nome dele
+function newConv(seed){
+  const tel=`(11) 9${Math.floor(1000+Math.random()*8999)}-${Math.floor(1000+Math.random()*8999)}`;
+  const cli=clienteDoTelefone(tel);
+  const c=Object.assign({id:++cseq,nome:cli?cli.nome:tel,ini:cli?cli.ini:'',phone:tel,step:'menu',cart:[],endereco:null,pagamento:null,pagStatus:null,humano:false,typing:false,messages:[],unread:0,lastAt:Date.now()},seed||{});
+  convs.push(c);return c;
+}
+const clienteDoTelefone=tel=>((DB.clientes||[]).find(x=>x.phone===tel)||null);
+const convSalva=c=>!!clienteDoTelefone(c.phone);
+// avatar: iniciais para contato salvo, silhueta genérica para número desconhecido
+const avatarHtml=c=>{const cli=clienteDoTelefone(c.phone);const ini=(cli&&cli.ini)||c.ini;return ini?esc(ini):'<svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" opacity=".55"><circle cx="12" cy="8" r="4"/><path d="M4 20a8 8 0 0 1 16 0z"/></svg>';};
 function pushMsg(c,who,text){c.messages.push({who,text,time:now()});c.lastAt=Date.now();if(c.id!==currentId&&who!=='cust')c.unread++;renderInbox();if(c.id===currentId){renderConversa();}if(typeof salvarChatsLog==='function')salvarChatsLog();}
 function botSay(c,text,delay=650){c.typing=true;if(c.id===currentId)renderConversa();setTimeout(()=>{c.typing=false;pushMsg(c,'bot',text);},delay);}
 
@@ -833,7 +846,7 @@ const opcoes=()=>'*1* — Ver cardápio\n*2* — Fazer pedido\n*3* — Falar com
 function confirmItems(c,items){c.step='mais';botSay(c,'Anotado! ✅\n'+describe(items)+'\n\nDeseja adicionar mais alguma coisa? (sim / não)',650);}
 function askAddress(c){c.step='endereco';botSay(c,'Perfeito! 📍 Qual o *endereço de entrega*? (rua, número e bairro)',600);}
 function askPayment(c){c.step='pagamento';botSay(c,'Por último, *como prefere pagar*?\n\n*1* — Pix\n*2* — Dinheiro\n*3* — Cartão',600);}
-function placeOrder(c){totals.pedidos++;totals.faturamento+=orderTotal(c)+taxa(c);updateKPIs();}
+function placeOrder(c){totals.pedidos++;totals.faturamento+=orderTotal(c)+taxa(c);updateKPIs();sincronizarClientes(true);}
 // aplica a forma de pagamento já interpretada (Pix/Dinheiro/Cartão na entrega)
 function aplicarPagamento(c,pg){
   const st=(pg==='Pix')?'aguardando':'na_entrega';
@@ -1192,10 +1205,12 @@ const lastLine=c=>{const m=c.messages[c.messages.length-1];if(!m)return'Nova con
 /* ---------- render atendimento ---------- */
 function renderInbox(){
   const box=$('#inbox');
-  box.innerHTML=convs.map(c=>{const[st,cls]=convStatus(c);return `<div class="inbox-row ${c.id===currentId?'active':''}" data-id="${c.id}"><div class="inbox-av">${esc(c.ini)}</div><div class="inbox-main"><div class="inbox-name">${c.querAtendente?'<span class="inbox-flag" title="Quer atendente"></span> ':''}${esc(c.nome)}</div><div class="inbox-last">${esc(lastLine(c))}</div></div><div class="inbox-right"><span class="chip ${cls}">${st}</span>${c.unread?`<span class="unread">${c.unread}</span>`:''}</div></div>`;}).join('');
+  box.innerHTML=convs.map(c=>{const[st,cls]=convStatus(c);return `<div class="inbox-row ${c.id===currentId?'active':''}" data-id="${c.id}"><div class="inbox-av">${avatarHtml(c)}</div><div class="inbox-main"><div class="inbox-name">${c.querAtendente?'<span class="inbox-flag" title="Quer atendente"></span> ':''}${esc(c.nome)}</div><div class="inbox-last">${esc(lastLine(c))}</div></div><div class="inbox-right">${convSalva(c)?'':`<button class="add-contact" data-add="${c.id}" title="Salvar contato"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>`}<span class="chip ${cls}">${st}</span>${c.unread?`<span class="unread">${c.unread}</span>`:''}</div></div>`;}).join('');
   box.querySelectorAll('.inbox-row').forEach(r=>r.onclick=()=>selectConv(+r.dataset.id));
+  box.querySelectorAll('[data-add]').forEach(b=>b.onclick=e=>{e.stopPropagation();salvarContato(+b.dataset.add);});
   const has=convs.length>0;
-  $('#inboxCard').style.display=has?'block':'none';
+  $('#inboxCard').style.display='block'; // sempre visível — o botão "+ Nova" mora aqui
+  if(!has)box.innerHTML='<div class="cli-empty">Nenhuma conversa no momento.</div>';
   $('#detail').style.display=(has&&currentId)?'grid':'none';
   $('#waitingState').style.display=has?'none':'flex';
 }
@@ -1214,7 +1229,7 @@ function renderConversa(){
 }
 function renderOrder(){
   const c=cur();if(!c)return;
-  $('#convAv').textContent=c.ini;$('#convName').textContent=c.nome;$('#convPhone').textContent=c.phone;
+  $('#convAv').innerHTML=avatarHtml(c);$('#convName').textContent=c.nome;$('#convPhone').textContent=c.phone;
   $('#stepBadge').textContent=({menu:'Conversando',pedido:'Escolhendo itens',mais:'Adicionando itens',revisao:'Revisando pedido',endereco:'Coletando endereço',pagamento:'Forma de pagamento',comprovante:'Aguardando comprovante',concluido:'Pedido fechado'})[c.step]||'—';
   $('#orderList').innerHTML=c.cart.length?c.cart.map(i=>`<div class="order-row"><span class="q">${i.qtd}×</span><div class="nm">${esc(i.nome)}${i.etiqueta?`<span class="etq etq-${i.etiqueta}">${i.etiqueta}</span>`:''}${i.note?`<span class="note">obs: ${esc(i.note)}</span>`:''}</div><span class="pr">R$ ${brl(i.preco*i.qtd)}</span></div>`).join(''):'<div class="order-empty">Nenhum item ainda.</div>';
   const pend=entregaPendente(c);const tx=taxa(c);const tot=orderTotal(c)+((c.cart.length&&!pend)?tx:0);
@@ -1406,21 +1421,42 @@ $('#limparBtn').onclick=limparPedidos;
 /* ===== CLIENTES + WhatsApp (protótipo — API oficial entra na Fase 2) ===== */
 function clientesDB(){if(!DB.clientes)DB.clientes=[];return DB.clientes;}
 function waCfg(){if(!DB.whatsapp)DB.whatsapp={conectado:false,numero:''};return DB.whatsapp;}
-// puxa clientes das conversas (sistema) e, com o WhatsApp conectado, marca-os como sincronizados lá também
-function sincronizarClientes(){
-  const lista=clientesDB();const wa=waCfg();let novos=0;
+// sincroniza os contatos SALVOS: soma pedidos/gasto das conversas (antes de expirarem) e
+// mantém o vínculo com o WhatsApp. Na Fase 2 a API do WhatsApp puxa aqui os contatos salvos do número.
+function sincronizarClientes(silencioso){
+  const lista=clientesDB();const wa=waCfg();let mov=0;
   convs.forEach(c=>{
-    if(!c.phone)return;
-    let cli=lista.find(x=>x.phone===c.phone);
-    if(!cli){cli={id:Date.now()+lista.length,nome:c.nome,ini:c.ini,phone:c.phone,whatsapp:false,pedidos:0,gasto:0};lista.push(cli);novos++;}
-    cli.nome=c.nome;cli.ini=c.ini;
+    if(!c.phone||!c.pagamento||c.contabilizado)return;
+    const cli=lista.find(x=>x.phone===c.phone);
+    if(!cli)return; // número não salvo → só entra na lista pelo botão + (ou pela API na Fase 2)
+    cli.pedidos=(cli.pedidos||0)+1;cli.gasto=(cli.gasto||0)+orderTotal(c)+taxa(c);
+    c.contabilizado=true;mov++;
   });
-  // pedidos/gasto por telefone, a partir das conversas com pagamento definido
-  const tot={};
-  convs.forEach(c=>{if(c.pagamento&&c.phone){const t=tot[c.phone]||(tot[c.phone]={p:0,g:0});t.p++;t.g+=orderTotal(c)+taxa(c);}});
-  lista.forEach(cli=>{const t=tot[cli.phone];if(t){cli.pedidos=t.p;cli.gasto=t.g;}if(wa.conectado)cli.whatsapp=true;});
-  DB.cliSyncAt=Date.now();saveDB();renderClientes();
-  toast(`Sincronizado ✓ ${novos} novo(s) · ${lista.length} cliente(s)`+(wa.conectado?' · WhatsApp em dia':''));
+  if(wa.conectado)lista.forEach(cli=>cli.whatsapp=true);
+  DB.cliSyncAt=Date.now();saveDB();
+  if($('#tabCli').style.display!=='none')renderClientes();
+  if(!silencioso)toast(`Sincronizado ✓ ${lista.length} contato(s) em dia`+(mov?` · ${mov} pedido(s) novos`:''));
+}
+function salvarContato(id){
+  const c=convs.find(x=>x.id===id);if(!c)return;
+  const nome=(window.prompt('Nome do contato para '+c.phone+':','')||'').trim();
+  if(!nome)return;
+  const ini=nome.split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase();
+  const lista=clientesDB();
+  let cli=lista.find(x=>x.phone===c.phone);
+  if(!cli){cli={id:Date.now(),nome,ini,phone:c.phone,whatsapp:true,pedidos:0,gasto:0};lista.push(cli);}
+  else{cli.nome=nome;cli.ini=ini;}
+  c.nome=nome;c.ini=ini;
+  saveDB();sincronizarClientes(true);renderInbox();renderConversa();renderOrder();
+  toast('Contato salvo ✓ '+nome);
+}
+function excluirContato(id){
+  const lista=clientesDB();const cli=lista.find(x=>String(x.id)===String(id));if(!cli)return;
+  if(!confirm('Excluir o contato "'+cli.nome+'"?'))return;
+  DB.clientes=lista.filter(x=>x!==cli);
+  convs.forEach(c=>{if(c.phone===cli.phone){c.nome=c.phone;c.ini='';}}); // volta a aparecer como número, com o +
+  saveDB();renderClientes();renderInbox();renderConversa();renderOrder();
+  toast('Contato excluído');
 }
 function renderClientes(){
   const lista=clientesDB();const wa=waCfg();
@@ -1429,9 +1465,10 @@ function renderClientes(){
   if(document.activeElement!==$('#waNumero'))$('#waNumero').value=wa.numero||'';
   $('#waConectarTxt').textContent=wa.conectado?'Desconectar':'Conectar';
   $('#cliSyncInfo').textContent=DB.cliSyncAt?('última sincronização: '+new Date(DB.cliSyncAt).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})):'salvos no sistema e no WhatsApp';
-  $('#cliList').innerHTML=lista.length?lista.map(cli=>`<div class="cli-row"><div class="cli-av">${esc(cli.ini||'?')}</div><div class="cli-main"><div class="cli-nome">${esc(cli.nome)}<span class="cli-badge sis">Sistema</span>${cli.whatsapp?'<span class="cli-badge wa">WhatsApp</span>':''}</div><div class="cli-tel">${esc(cli.phone||'')}</div></div><div class="cli-meta"><b>${cli.pedidos||0} pedido${(cli.pedidos||0)===1?'':'s'}</b>R$ ${brl(cli.gasto||0)}</div></div>`).join(''):'<div class="cli-empty">Nenhum cliente salvo ainda. Toque em <b>Sincronizar</b> para puxar os clientes das conversas.</div>';
+  $('#cliList').innerHTML=lista.length?lista.map(cli=>`<div class="cli-row"><div class="cli-av">${esc(cli.ini||'?')}</div><div class="cli-main"><div class="cli-nome">${esc(cli.nome)}<span class="cli-badge sis">Sistema</span>${cli.whatsapp?'<span class="cli-badge wa">WhatsApp</span>':''}</div><div class="cli-tel">${esc(cli.phone||'')}</div></div><div class="cli-meta"><b>${cli.pedidos||0} pedido${(cli.pedidos||0)===1?'':'s'}</b>R$ ${brl(cli.gasto||0)}</div><button class="cli-del" data-del="${cli.id}" title="Excluir contato"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button></div>`).join(''):'<div class="cli-empty">Nenhum contato salvo ainda. Salve pelo botão <b>+</b> nas conversas — na Fase 2, a API do WhatsApp puxa para cá os contatos salvos do número automaticamente.</div>';
+  $('#cliList').querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>excluirContato(b.dataset.del));
 }
-$('#syncBtn').onclick=sincronizarClientes;
+$('#syncBtn').onclick=()=>sincronizarClientes(false);
 $('#waNumero').addEventListener('input',e=>{waCfg().numero=e.target.value;saveDB();});
 $('#waConectarBtn').onclick=()=>{
   const wa=waCfg();
@@ -1738,17 +1775,7 @@ $('#lojaLocBtn').onclick=()=>{
   });
 };
 
-/* ---------- seeds ---------- */
-function seed(){
-  const ana=newConv({nome:'Ana Costa',ini:'AC',step:'comprovante',
-    cart:[{id:2,nome:'Marmita de Carne',preco:20,etiqueta:'G',qtd:1,note:'sem cebola'},{id:4,nome:'Pepsi',preco:6,etiqueta:'lata',qtd:1,note:null}],
-    endereco:'Av. Brasil, 880 - Vila Nova',pagamento:'Pix',pagStatus:'comprovante',unread:1,
-    messages:[{who:'bot',text:'Olá! 👋 Sou o robô da Marmitaria Sabor Caseiro.',time:'12:31'},{who:'cust',text:'uma marmita de carne sem cebola e uma pepsi',time:'12:32'},{who:'bot',text:'Anotado! ✅\n• 1× Marmita de Carne {{etq:G}} (sem cebola)\n• 1× Pepsi {{etq:lata}}',time:'12:32'},{who:'cust',text:'Av. Brasil, 880 - Vila Nova. Pix',time:'12:33'},{who:'bot',text:'Pedido registrado! Chave Pix: marmitaria@sabor.com. Me envie o comprovante 🧾',time:'12:33'},{who:'cust',text:'enviei o comprovante 🧾',time:'12:35'},{who:'bot',text:'Recebi seu comprovante! 🧾 Vou validar e já confirmo. 😊',time:'12:35'}]});
-  newConv({nome:'Carlos Souza',ini:'CS',step:'concluido',cart:[{id:1,nome:'Marmita de Frango',preco:18,etiqueta:'M',qtd:2,note:null}],endereco:'Rua 7 de Setembro, 45',pagamento:'Dinheiro',pagStatus:'na_entrega',
-    messages:[{who:'bot',text:'Olá! 👋 Como posso ajudar?',time:'12:40'},{who:'cust',text:'2 marmitas de frango',time:'12:41'},{who:'bot',text:'Anotado! ✅\n• 2× Marmita de Frango\n\nDeseja adicionar mais alguma coisa? (sim / não)',time:'12:41'},{who:'cust',text:'não, pode fechar',time:'12:42'},{who:'bot',text:'Perfeito! 📍 Qual o endereço de entrega?',time:'12:42'},{who:'cust',text:'Rua 7 de Setembro, 45 — dinheiro',time:'12:42'},{who:'bot',text:'Pedido confirmado! 🎉 Total R$ 41,00 — Dinheiro. Pagamento na entrega.',time:'12:42'}]});
-  totals.pedidos=2;totals.faturamento=(20+6+taxa())+(18*2+taxa());updateKPIs();
-  currentId=ana.id;
-}
+/* ---------- sem seeds: conversas chegam como números desconhecidos (botão "+ Nova" simula) ---------- */
 
 /* ---------- bloqueio (painel do criador) ---------- */
 const THIS_RESTAURANT_ID=1;
@@ -1779,6 +1806,7 @@ function checkAccess(){
 /* ---------- limpeza automática: remove conversas paradas / pedidos finalizados há ≥ 3 min ---------- */
 const TTL_MS=3*60*1000;
 function limparConversasParadas(){
+  sincronizarClientes(true); // SEMPRE sincroniza os contatos salvos ANTES de descartar conversas temporárias
   const agora=Date.now();const antes=convs.length;
   convs=convs.filter(c=>c.humano||(agora-(c.lastAt||agora))<TTL_MS); // atendente cuidando → preserva
   if(convs.length!==antes){
@@ -1791,7 +1819,7 @@ setInterval(limparConversasParadas,30000);
 
 /* ---------- BOOT ---------- */
 $('#topSub').textContent='Painel do dono · '+R().nome;
-seed();renderAt();ensureDemoTenant();checkAccess();showTab('at');
+renderAt();ensureDemoTenant();checkAccess();showTab('at');
 window.addEventListener('storage',e=>{if(e.key==='criador_tenants_v1')checkAccess();});
 
 /* expõe para a bateria de testes (e o ConversationEngine) */
