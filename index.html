@@ -682,6 +682,35 @@ function matchItem(chunk){
   }
   return null;
 }
+// como matchItem, mas devolve TODOS os produtos plausíveis — mais de um = incerteza (pergunta ao cliente)
+function matchCandidatos(chunk){
+  const hits=[];
+  for(const it of R().cardapio){
+    let ok=(it.nome&&chunk.includes(it.nome.toLowerCase()));
+    if(!ok)for(const k of kwsOf(it)){const re=k.length<=2?new RegExp('\\b'+escRe(k)+'\\b'):new RegExp('\\b'+escRe(k));if(re.test(chunk)){ok=true;break;}}
+    if(ok)hits.push(it);
+  }
+  if(hits.length)return hits;
+  const freq=termosDistintivos();
+  const tokens=chunk.split(/\s+/).filter(w=>w.length>=4);
+  let best=[],bestD=99;
+  for(const it of R().cardapio){
+    const terms=termosDe(it).filter(t=>freq[t]===1);
+    let d0=99;
+    for(const t of terms)for(const w of tokens){const d=lev(w,t);const thr=t.length>=5?2:1;if(d<=thr&&d<d0)d0=d;}
+    if(d0<bestD){bestD=d0;best=[it];}else if(d0<99&&d0===bestD)best.push(it);
+  }
+  if(best.length)return best;
+  const etqM=chunk.match(ETQ_RE);
+  if(etqM){
+    const etq=etqM[1];
+    let cand=R().cardapio.filter(it=>String(it.etiqueta||'').toLowerCase()===etq);
+    if(/marmit/.test(chunk))cand=cand.filter(it=>(it.tipo||'marmita')==='marmita');
+    else if(/bebida|refri|coca|pepsi|guaran/.test(chunk))cand=cand.filter(it=>it.tipo==='bebida');
+    return cand;
+  }
+  return [];
+}
 const NUM={um:1,uma:1,dois:2,duas:2,tres:3,'três':3,quatro:4,cinco:5,seis:6,sete:7,oito:8,nove:9,dez:10};
 function parseQty(c){
   // ignora características de volume/tamanho pra não virar quantidade ("coca 600", "350ml", "2 litros", "2l")
@@ -694,10 +723,13 @@ function parseQty(c){
 function parseNote(c){const tr=['sem ','com ','bem ','mal ','pouco ','muito ','extra ','capricha','no ponto','ao ponto','bem passad','mal passad'];let idx=-1;for(const t of tr){const i=c.indexOf(t);if(i>=0&&(idx<0||i<idx))idx=i;}return idx>=0?c.slice(idx).trim():null;}
 const ETQ_RE=/\b(p|m|g|lata|600|350|310|2l)\b/;
 function parseOrder(text){
-  const t=text.toLowerCase();const chunks=t.split(/\s+e\s+|,|\+|\/|\bmais\b/);const out=[];out.indisponiveis=[];
+  const t=text.toLowerCase();const chunks=t.split(/\s+e\s+|,|\+|\/|\bmais\b/);const out=[];out.indisponiveis=[];out.ambiguos=[];
   for(let c of chunks){
     c=c.trim();if(!c)continue;
-    let it=matchItem(c);if(!it)continue;
+    const cands=matchCandidatos(c);
+    if(!cands.length)continue;
+    if(cands.length>1){out.ambiguos.push({termo:c,opcoes:cands});continue;} // incerto → pergunta, NÃO anota
+    let it=cands[0];
     // cliente pediu um tamanho explícito (P/M/G, lata…) que não é o do produto encontrado
     const em=c.match(ETQ_RE);
     if(em&&it.etiqueta&&em[1]!==String(it.etiqueta).toLowerCase()){
@@ -710,6 +742,7 @@ function parseOrder(text){
   return out;
 }
 const msgIndisponivel=list=>list.map(x=>`Não temos *${x.nome}* no tamanho *${x.etq}* 😕 — disponível: {{etq:${x.item.etiqueta}}} (R$ ${brl(x.item.preco)})`).join('\n');
+const msgAmbiguo=list=>list.map(x=>`Sobre "${x.termo}": temos ${x.opcoes.map(o=>`*${o.nome}*${o.etiqueta?' {{etq:'+o.etiqueta+'}}':''}`).join(', ')} — qual você prefere?`).join('\n');
 const describe=items=>items.map(i=>`• ${i.qtd}× ${i.nome}${i.etiqueta?' {{etq:'+i.etiqueta+'}}':''}${i.note?' ('+i.note+')':''}`).join('\n');
 // remove os marcadores {{etq:…}} quando o texto vai para fora do chat (inbox, export)
 const plainEtq=s=>(s+'').replace(/\{\{etq:([^}]+)\}\}/g,'($1)');
@@ -804,7 +837,10 @@ function revisarPedido(c){
 }
 function confirmAndSuggest(c,items){
   if(c.step==='menu')c.step='pedido';
-  const aviso=(items.indisponiveis&&items.indisponiveis.length)?msgIndisponivel(items.indisponiveis)+'\n\n':'';
+  const avisos=[];
+  if(items.indisponiveis&&items.indisponiveis.length)avisos.push(msgIndisponivel(items.indisponiveis));
+  if(items.ambiguos&&items.ambiguos.length)avisos.push(msgAmbiguo(items.ambiguos));
+  const aviso=avisos.length?avisos.join('\n')+'\n\n':'';
   let msg=aviso+'Anotado! ✅ Seu pedido até agora:\n'+describe(c.cart);
   const temMarmita=items.some(i=>!isBebida(i));
   const temBebida=c.cart.some(isBebida);
@@ -830,11 +866,19 @@ function corrigirPedido(c,novos){
 }
 function adicionarNoFluxo(c,itens){
   addItems(c,itens);c.lastProduct=itens[itens.length-1];renderOrder();renderInbox();
-  const aviso=(itens.indisponiveis&&itens.indisponiveis.length)?msgIndisponivel(itens.indisponiveis)+'\n\n':'';
+  const avs=[];
+  if(itens.indisponiveis&&itens.indisponiveis.length)avs.push(msgIndisponivel(itens.indisponiveis));
+  if(itens.ambiguos&&itens.ambiguos.length)avs.push(msgAmbiguo(itens.ambiguos));
+  const aviso=avs.length?avs.join('\n')+'\n\n':'';
   if(c.step==='endereco')botSay(c,aviso+'Adicionei ✅ Seu pedido até agora:\n'+describe(c.cart)+'\nVoltando: qual o *endereço de entrega*?',600);
   else if(c.step==='pagamento')botSay(c,aviso+'Adicionei ✅ Seu pedido até agora:\n'+describe(c.cart)+'\n*Como prefere pagar?* 1 Pix · 2 Dinheiro · 3 Cartão',600);
   else if(c.step==='comprovante')botSay(c,aviso+'Adicionei ✅ Seu pedido até agora:\n'+describe(c.cart)+'\nMe avise quando enviar o comprovante 🧾',600);
   else confirmAndSuggest(c,itens);
+}
+// pedido incerto (termo casa com vários produtos) → pergunta qual, sem anotar nada
+function responderAmbiguo(c,list){
+  if(c.step==='menu')c.step='pedido';
+  botSay(c,msgAmbiguo(list)+'\n\nÉ só me dizer qual 😊',600);
 }
 // pedido só com tamanhos indisponíveis → avisa e oferece o tamanho que existe (não anota nada)
 function responderIndisponivel(c,list){
@@ -895,6 +939,9 @@ function interpretar(text,estado,c){
   const itens=parseOrder(text);
   if(itens.length)return{intent:'ADICIONAR',itens};
   if(itens.indisponiveis.length)return{intent:'INDISPONIVEL',indisponiveis:itens.indisponiveis};
+  if(itens.ambiguos.length)return{intent:'AMBIGUO',ambiguos:itens.ambiguos};
+  // pedido genérico de bebida ("uma bebida", "um suco") → lista as opções em vez de chutar
+  if(/\b(bebida|refrigerante|suco)s?\b/.test(v)){const bs=R().cardapio.filter(isBebida);if(bs.length)return{intent:'AMBIGUO',ambiguos:[{termo:'bebida',opcoes:bs}]};}
 
   if(/^(sim|s|isso|aham|claro|com certeza|pode ser|bora|ok|blz|beleza|positivo|quero|mais|pode|manda|adiciona)\b/.test(v))return{intent:'SIM'};
   if(RE_SAUDACAO.test(v))return{intent:'SAUDACAO'};
@@ -922,6 +969,7 @@ function processarIntent(c,r,text){
     case 'TROCAR':return trocarItem(c,r.de,r.para);
     case 'CORRIGIR':return corrigirPedido(c,r.itens);
     case 'INDISPONIVEL':return responderIndisponivel(c,r.indisponiveis);
+    case 'AMBIGUO':return responderAmbiguo(c,r.ambiguos);
     case 'SAUDACAO':return saudar(c);
   }
 
