@@ -65,8 +65,10 @@
   .cli-empty{padding:26px 18px;text-align:center;color:var(--faint);font-size:13px;}
   .cli-del{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;color:var(--faint);flex:none;transition:background .15s,color .15s;}
   .cli-del:hover{background:var(--danger-soft);color:var(--danger);}
+  .cli-del.edit:hover{background:var(--primary-soft);color:var(--primary);}
   .add-contact{width:26px;height:26px;border-radius:50%;background:var(--primary-soft);color:var(--primary);display:grid;place-items:center;flex:none;transition:filter .15s;}
   .add-contact:hover{filter:brightness(.95);}
+  .add-contact.edit{background:var(--bg);color:var(--muted);}
 
   .kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
   .kpi{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:16px;box-shadow:var(--shadow-sm);}
@@ -504,7 +506,7 @@
             <div class="ico-box" style="background:var(--primary-soft)"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="#4F46E5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
             <div style="flex:1"><h3>Clientes</h3><div class="sub" id="cliSyncInfo">salvos no sistema e no WhatsApp</div></div>
             <span class="step-badge" id="cliCount">0</span>
-            <button class="btn-new" id="syncBtn" title="Puxa os clientes das conversas e sincroniza com o WhatsApp"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"/><path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14"/></svg> Sincronizar</button>
+            <button class="btn-new" id="syncBtn" title="Atualiza os contatos salvos com os pedidos das conversas e sincroniza com o WhatsApp"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"/><path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14"/></svg> Sincronizar</button>
           </div>
           <div id="cliList"></div>
         </div>
@@ -1205,9 +1207,10 @@ const lastLine=c=>{const m=c.messages[c.messages.length-1];if(!m)return'Nova con
 /* ---------- render atendimento ---------- */
 function renderInbox(){
   const box=$('#inbox');
-  box.innerHTML=convs.map(c=>{const[st,cls]=convStatus(c);return `<div class="inbox-row ${c.id===currentId?'active':''}" data-id="${c.id}"><div class="inbox-av">${avatarHtml(c)}</div><div class="inbox-main"><div class="inbox-name">${c.querAtendente?'<span class="inbox-flag" title="Quer atendente"></span> ':''}${esc(c.nome)}</div><div class="inbox-last">${esc(lastLine(c))}</div></div><div class="inbox-right">${convSalva(c)?'':`<button class="add-contact" data-add="${c.id}" title="Salvar contato"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>`}<span class="chip ${cls}">${st}</span>${c.unread?`<span class="unread">${c.unread}</span>`:''}</div></div>`;}).join('');
+  box.innerHTML=convs.map(c=>{const[st,cls]=convStatus(c);return `<div class="inbox-row ${c.id===currentId?'active':''}" data-id="${c.id}"><div class="inbox-av">${avatarHtml(c)}</div><div class="inbox-main"><div class="inbox-name">${c.querAtendente?'<span class="inbox-flag" title="Quer atendente"></span> ':''}${esc(c.nome)}</div><div class="inbox-last">${esc(lastLine(c))}</div></div><div class="inbox-right">${convSalva(c)?`<button class="add-contact edit" data-edit="${c.id}" title="Editar contato"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5z"/></svg></button>`:(c.pagamento?`<button class="add-contact" data-add="${c.id}" title="Salvar contato"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>`:'')}<span class="chip ${cls}">${st}</span>${c.unread?`<span class="unread">${c.unread}</span>`:''}</div></div>`;}).join('');
   box.querySelectorAll('.inbox-row').forEach(r=>r.onclick=()=>selectConv(+r.dataset.id));
   box.querySelectorAll('[data-add]').forEach(b=>b.onclick=e=>{e.stopPropagation();salvarContato(+b.dataset.add);});
+  box.querySelectorAll('[data-edit]').forEach(b=>b.onclick=e=>{e.stopPropagation();const c=convs.find(x=>x.id===+b.dataset.edit);const cli=c&&clienteDoTelefone(c.phone);if(cli)editarContato(cli.id);});
   const has=convs.length>0;
   $('#inboxCard').style.display='block'; // sempre visível — o botão "+ Nova" mora aqui
   if(!has)box.innerHTML='<div class="cli-empty">Nenhuma conversa no momento.</div>';
@@ -1454,9 +1457,22 @@ function excluirContato(id){
   const lista=clientesDB();const cli=lista.find(x=>String(x.id)===String(id));if(!cli)return;
   if(!confirm('Excluir o contato "'+cli.nome+'"?'))return;
   DB.clientes=lista.filter(x=>x!==cli);
-  convs.forEach(c=>{if(c.phone===cli.phone){c.nome=c.phone;c.ini='';}}); // volta a aparecer como número, com o +
+  // volta a aparecer como número (com o +) e libera os pedidos para recontagem se for salvo de novo
+  convs.forEach(c=>{if(c.phone===cli.phone){c.nome=c.phone;c.ini='';c.contabilizado=false;}});
   saveDB();renderClientes();renderInbox();renderConversa();renderOrder();
   toast('Contato excluído');
+}
+// lápis: edita nome E telefone do contato salvo (nas conversas e na aba Clientes)
+function editarContato(id){
+  const cli=clientesDB().find(x=>String(x.id)===String(id));if(!cli)return;
+  const nome=(window.prompt('Nome do contato:',cli.nome)||'').trim();if(!nome)return;
+  const tel=(window.prompt('Telefone do contato:',cli.phone)||'').trim();if(!tel)return;
+  if(clientesDB().some(x=>x!==cli&&x.phone===tel)){toast('Já existe um contato com esse número 📱');return;}
+  const telAntigo=cli.phone;
+  cli.nome=nome;cli.ini=nome.split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase();cli.phone=tel;
+  convs.forEach(c=>{if(c.phone===telAntigo){c.phone=tel;c.nome=nome;c.ini=cli.ini;}});
+  saveDB();renderClientes();renderInbox();renderConversa();renderOrder();
+  toast('Contato atualizado ✓');
 }
 function renderClientes(){
   const lista=clientesDB();const wa=waCfg();
@@ -1465,8 +1481,9 @@ function renderClientes(){
   if(document.activeElement!==$('#waNumero'))$('#waNumero').value=wa.numero||'';
   $('#waConectarTxt').textContent=wa.conectado?'Desconectar':'Conectar';
   $('#cliSyncInfo').textContent=DB.cliSyncAt?('última sincronização: '+new Date(DB.cliSyncAt).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})):'salvos no sistema e no WhatsApp';
-  $('#cliList').innerHTML=lista.length?lista.map(cli=>`<div class="cli-row"><div class="cli-av">${esc(cli.ini||'?')}</div><div class="cli-main"><div class="cli-nome">${esc(cli.nome)}<span class="cli-badge sis">Sistema</span>${cli.whatsapp?'<span class="cli-badge wa">WhatsApp</span>':''}</div><div class="cli-tel">${esc(cli.phone||'')}</div></div><div class="cli-meta"><b>${cli.pedidos||0} pedido${(cli.pedidos||0)===1?'':'s'}</b>R$ ${brl(cli.gasto||0)}</div><button class="cli-del" data-del="${cli.id}" title="Excluir contato"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button></div>`).join(''):'<div class="cli-empty">Nenhum contato salvo ainda. Salve pelo botão <b>+</b> nas conversas — na Fase 2, a API do WhatsApp puxa para cá os contatos salvos do número automaticamente.</div>';
+  $('#cliList').innerHTML=lista.length?lista.map(cli=>`<div class="cli-row"><div class="cli-av">${esc(cli.ini||'?')}</div><div class="cli-main"><div class="cli-nome">${esc(cli.nome)}<span class="cli-badge sis">Sistema</span>${cli.whatsapp?'<span class="cli-badge wa">WhatsApp</span>':''}</div><div class="cli-tel">${esc(cli.phone||'')}</div></div><div class="cli-meta"><b>${cli.pedidos||0} pedido${(cli.pedidos||0)===1?'':'s'}</b>R$ ${brl(cli.gasto||0)}</div><button class="cli-del edit" data-editc="${cli.id}" title="Editar contato"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5z"/></svg></button><button class="cli-del" data-del="${cli.id}" title="Excluir contato"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button></div>`).join(''):'<div class="cli-empty">Nenhum contato salvo ainda. Salve pelo botão <b>+</b> nas conversas — na Fase 2, a API do WhatsApp puxa para cá os contatos salvos do número automaticamente.</div>';
   $('#cliList').querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>excluirContato(b.dataset.del));
+  $('#cliList').querySelectorAll('[data-editc]').forEach(b=>b.onclick=()=>editarContato(b.dataset.editc));
 }
 $('#syncBtn').onclick=()=>sincronizarClientes(false);
 $('#waNumero').addEventListener('input',e=>{waCfg().numero=e.target.value;saveDB();});
