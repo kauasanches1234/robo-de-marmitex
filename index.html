@@ -297,8 +297,11 @@
   .switch.on{background:var(--ok);}
   .switch::after{content:"";position:absolute;top:3px;left:3px;width:21px;height:21px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.2);transition:left .18s;}
   .switch.on::after{left:22px;}
-  .menu-head{display:grid;grid-template-columns:1.3fr .6fr 64px 1.3fr 34px;gap:8px;font-size:11px;font-weight:700;color:var(--faint);text-transform:uppercase;letter-spacing:.03em;margin-bottom:6px;padding:0 2px;}
-  .menu-row{display:grid;grid-template-columns:1.3fr .6fr 64px 1.3fr 34px;gap:8px;align-items:center;margin-bottom:8px;}
+  .menu-head{display:grid;grid-template-columns:1.3fr .55fr 150px 1.2fr 34px;gap:8px;font-size:11px;font-weight:700;color:var(--faint);text-transform:uppercase;letter-spacing:.03em;margin-bottom:6px;padding:0 2px;}
+  .menu-row{display:grid;grid-template-columns:1.3fr .55fr 150px 1.2fr 34px;gap:8px;align-items:center;margin-bottom:8px;}
+  .etq-picker{display:flex;gap:4px;flex-wrap:wrap;}
+  .etq-pick{font-size:10.5px;font-weight:800;padding:4px 9px;border-radius:999px;background:var(--bg);color:var(--faint);border:1px solid var(--line);transition:background .15s,color .15s,border-color .15s;}
+  .etq-pick.on{background:var(--primary-soft);color:var(--primary);border-color:transparent;}
   .menu-row input,.menu-row select{border:1px solid var(--line);border-radius:9px;padding:8px 10px;font-size:13px;outline:none;width:100%;}
   .menu-row input:focus,.menu-row select:focus{border-color:var(--primary);}
   .icon-del{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;color:var(--faint);background:var(--bg);flex:none;transition:background .15s,color .15s;}
@@ -660,6 +663,8 @@
 const STORE='marmitex_db_v1';
 const ETQ={marmita:['P','M','G'],bebida:['lata','600','2L']};
 const etqOptions=tipo=>ETQ[tipo]||ETQ.marmita;
+// um produto pode ter VÁRIAS etiquetas ("P+M+G"); devolve a lista
+const etqsOf=it=>String((it&&it.etiqueta)||'').split('+').map(s=>s.trim()).filter(Boolean);
 function defaultDB(){return{restaurant:{
   nome:'Marmitaria Sabor Caseiro', pixKey:'marmitaria@sabor.com', horario:'11h–15h e 18h–22h',
   taxaEntrega:5, entregaGratis:false, tempoEntrega:'40 min',
@@ -727,7 +732,7 @@ function matchItem(chunk){
   const etqM=chunk.match(/\b(p|m|g|lata|600|350|310|2l)\b/);
   if(etqM){
     const etq=etqM[1];
-    let cand=R().cardapio.filter(it=>String(it.etiqueta||'').toLowerCase()===etq);
+    let cand=R().cardapio.filter(it=>etqsOf(it).some(s=>s.toLowerCase()===etq));
     if(/marmit/.test(chunk))cand=cand.filter(it=>(it.tipo||'marmita')==='marmita');
     else if(/bebida|refri|coca|pepsi|guaran/.test(chunk))cand=cand.filter(it=>it.tipo==='bebida');
     if(cand.length===1)return cand[0]; // só casa se a etiqueta identificar UM produto (sem ambiguidade)
@@ -756,7 +761,7 @@ function matchCandidatos(chunk){
   const etqM=chunk.match(ETQ_RE);
   if(etqM){
     const etq=etqM[1];
-    let cand=R().cardapio.filter(it=>String(it.etiqueta||'').toLowerCase()===etq);
+    let cand=R().cardapio.filter(it=>etqsOf(it).some(s=>s.toLowerCase()===etq));
     if(/marmit/.test(chunk))cand=cand.filter(it=>(it.tipo||'marmita')==='marmita');
     else if(/bebida|refri|coca|pepsi|guaran/.test(chunk))cand=cand.filter(it=>it.tipo==='bebida');
     return cand;
@@ -774,26 +779,42 @@ function parseQty(c){
 }
 function parseNote(c){const tr=['sem ','com ','bem ','mal ','pouco ','muito ','extra ','capricha','no ponto','ao ponto','bem passad','mal passad'];let idx=-1;for(const t of tr){const i=c.indexOf(t);if(i>=0&&(idx<0||i<idx))idx=i;}return idx>=0?c.slice(idx).trim():null;}
 const ETQ_RE=/\b(p|m|g|lata|600|350|310|2l)\b/;
+// tamanho pedido no texto: sigla (P/M/G/lata/600/2L) ou por extenso (pequena/média/grande)
+function tamanhoPedido(c){
+  const m=c.match(ETQ_RE);if(m)return m[1];
+  const w=c.match(/\b(pequen\w*|m[eé]di\w*|grand\w*)\b/);
+  if(w){if(/^pequen/.test(w[1]))return 'p';if(/^grand/.test(w[1]))return 'g';return 'm';}
+  return null;
+}
 function parseOrder(text){
-  const t=text.toLowerCase();const chunks=t.split(/\s+e\s+|,|\+|\/|\bmais\b/);const out=[];out.indisponiveis=[];out.ambiguos=[];
+  const t=text.toLowerCase();const chunks=t.split(/\s+e\s+|,|\+|\/|\bmais\b/);const out=[];out.indisponiveis=[];out.ambiguos=[];out.semTamanho=[];
   for(let c of chunks){
     c=c.trim();if(!c)continue;
     const cands=matchCandidatos(c);
     if(!cands.length)continue;
     if(cands.length>1){out.ambiguos.push({termo:c,opcoes:cands});continue;} // incerto → pergunta, NÃO anota
     let it=cands[0];
-    // cliente pediu um tamanho explícito (P/M/G, lata…) que não é o do produto encontrado
-    const em=c.match(ETQ_RE);
-    if(em&&it.etiqueta&&em[1]!==String(it.etiqueta).toLowerCase()){
-      const alt=R().cardapio.find(x=>x.nome===it.nome&&String(x.etiqueta||'').toLowerCase()===em[1]);
-      if(alt)it=alt; // existe o mesmo produto no tamanho pedido → usa ele
-      else{out.indisponiveis.push({nome:it.nome,etq:em[1].length===1?em[1].toUpperCase():em[1],item:it});continue;} // não existe → avisa, NÃO anota
+    const pedida=tamanhoPedido(c);
+    let sizes=etqsOf(it);
+    let etiqueta=sizes[0]||'';
+    if(pedida&&sizes.length){
+      const own=sizes.find(s=>s.toLowerCase()===pedida);
+      if(own)etiqueta=own;
+      else{
+        // mesmo produto cadastrado em outra linha com o tamanho pedido?
+        const alt=R().cardapio.find(x=>x.nome===it.nome&&etqsOf(x).some(s=>s.toLowerCase()===pedida));
+        if(alt){it=alt;sizes=etqsOf(alt);etiqueta=sizes.find(s=>s.toLowerCase()===pedida);}
+        else{out.indisponiveis.push({nome:it.nome,etq:pedida.length===1?pedida.toUpperCase():pedida,item:it});continue;} // não existe → avisa, NÃO anota
+      }
+    }else if(!pedida&&sizes.length>1){
+      out.semTamanho.push({item:it,qtd:parseQty(c),note:parseNote(c)});continue; // várias etiquetas e nenhuma pedida → pergunta o tamanho
     }
-    out.push({id:it.id,nome:it.nome,preco:it.preco,etiqueta:it.etiqueta,qtd:parseQty(c),note:parseNote(c)});
+    out.push({id:it.id,nome:it.nome,preco:it.preco,etiqueta,qtd:parseQty(c),note:parseNote(c)});
   }
   return out;
 }
-const msgIndisponivel=list=>list.map(x=>`Não temos *${x.nome}* no tamanho *${x.etq}* 😕 — disponível: {{etq:${x.item.etiqueta}}} (R$ ${brl(x.item.preco)})`).join('\n');
+const chipsDe=it=>etqsOf(it).map(s=>'{{etq:'+s+'}}').join(' ');
+const msgIndisponivel=list=>list.map(x=>`Não temos *${x.nome}* no tamanho *${x.etq}* 😕 — disponível: ${chipsDe(x.item)} (R$ ${brl(x.item.preco)})`).join('\n');
 const msgAmbiguo=list=>list.map(x=>`Sobre "${x.termo}": temos ${x.opcoes.map(o=>`*${o.nome}*${o.etiqueta?' {{etq:'+o.etiqueta+'}}':''}`).join(', ')} — qual você prefere?`).join('\n');
 const describe=items=>items.map(i=>`• ${i.qtd}× ${i.nome}${i.etiqueta?' {{etq:'+i.etiqueta+'}}':''}${i.note?' ('+i.note+')':''}`).join('\n');
 // remove os marcadores {{etq:…}} quando o texto vai para fora do chat (inbox, export)
@@ -831,7 +852,7 @@ const PAGINFO={
   confirmado:['Pagamento confirmado','ok','M20 6 9 17l-5-5'],
   na_entrega:['Pagamento na entrega','slate','M1 3h15v13H1z M16 8h4l3 3v5h-7'],
 };
-const addItems=(c,items)=>items.forEach(ni=>{const s=c.cart.find(i=>i.id===ni.id&&(i.note||'')===(ni.note||''));if(s)s.qtd+=ni.qtd;else c.cart.push({...ni});});
+const addItems=(c,items)=>items.forEach(ni=>{const s=c.cart.find(i=>i.id===ni.id&&(i.note||'')===(ni.note||'')&&(i.etiqueta||'')===(ni.etiqueta||''));if(s)s.qtd+=ni.qtd;else c.cart.push({...ni});}); // etiqueta diferente = linha separada (Frango P ≠ Frango G)
 const orderTotal=c=>c.cart.reduce((s,i)=>s+i.preco*i.qtd,0);
 const taxa=(c)=>{if(R().entregaGratis)return 0;if(c&&c.zonaTaxa!=null)return c.zonaTaxa;return (+R().taxaEntrega||0);};
 // entrega dinâmica ligada, com zonas, mas ainda sem endereço resolvido → taxa só após o endereço
@@ -841,7 +862,7 @@ const linhaEntrega=c=>{if(R().entregaGratis)return 'Entrega: grátis';if(entrega
 function blocoTotal(c){const sub=orderTotal(c);if(entregaPendente(c))return `*Subtotal: R$ ${brl(sub)}* _(+ entrega conforme o endereço)_`;return `*Total: R$ ${brl(sub+taxa(c))}*`;}
 
 /* ---------- fluxo ---------- */
-const menuTxt=()=>'Cardápio de hoje 🍽️\n'+R().cardapio.map(i=>`• ${i.nome}${i.etiqueta?' {{etq:'+i.etiqueta+'}}':''} — R$ ${brl(i.preco)}`).join('\n')+'\n\nÉ só me dizer o que quer.';
+const menuTxt=()=>'Cardápio de hoje 🍽️\n'+R().cardapio.map(i=>{const s=chipsDe(i);return `• ${i.nome}${s?' '+s:''} — R$ ${brl(i.preco)}`;}).join('\n')+'\n\nÉ só me dizer o que quer.';
 const menuShort=()=>R().cardapio.map(i=>i.nome).join(', ');
 function greet(c){c.step='menu';botSay(c,`Olá! 👋 Sou o robô da *${R().nome}*.\nÉ só me dizer seu pedido ou escolher:\n\n*1* — Ver cardápio\n*2* — Fazer pedido\n*3* — Falar com atendente`,500);}
 const opcoes=()=>'*1* — Ver cardápio\n*2* — Fazer pedido\n*3* — Falar com atendente';
@@ -902,7 +923,9 @@ function confirmAndSuggest(c,items){
   if(items.indisponiveis&&items.indisponiveis.length)avisos.push(msgIndisponivel(items.indisponiveis));
   if(items.ambiguos&&items.ambiguos.length)avisos.push(msgAmbiguo(items.ambiguos));
   const aviso=avisos.length?avisos.join('\n')+'\n\n':'';
+  const ps=(items.semTamanho&&items.semTamanho.length)?items.semTamanho[0]:null;
   let msg=aviso+'Anotado! ✅ Seu pedido até agora:\n'+describe(c.cart);
+  if(ps){c.pendingSize=ps;c.lastProduct=ps.item;msg+=`\n\n*${ps.item.nome}* tem os tamanhos ${chipsDe(ps.item)} — qual você quer? 😊`;botSay(c,msg,650);return;}
   const temMarmita=items.some(i=>!isBebida(i));
   const temBebida=c.cart.some(isBebida);
   if(temMarmita&&!temBebida&&!c.suggested){const b=bebidasDisp();if(b.length){msg+=`\n\n🥤 Quer uma bebida pra acompanhar? Tem ${b.join(', ')}.`;c.suggested=true;}}
@@ -917,7 +940,7 @@ function removerItem(c,p){
   botSay(c,'Não achei esse item no seu pedido 🤔. Quer que eu mostre o que já está anotado?',550);
 }
 function trocarItem(c,de,para){
-  if(de&&para){const idx=c.cart.findIndex(i=>i.id===de.id);if(idx>=0){if(c.cart[idx].qtd>1)c.cart[idx].qtd--;else c.cart.splice(idx,1);}addItems(c,[{id:para.id,nome:para.nome,preco:para.preco,etiqueta:para.etiqueta,qtd:1,note:null}]);c.lastProduct=para;renderOrder();renderInbox();if(c.step==='menu')c.step='pedido';botSay(c,`Feito! Troquei *${de.nome}* por *${para.nome}*. ✅\nDeseja mais alguma coisa?`,600);return;}
+  if(de&&para){const idx=c.cart.findIndex(i=>i.id===de.id);if(idx>=0){if(c.cart[idx].qtd>1)c.cart[idx].qtd--;else c.cart.splice(idx,1);}addItems(c,[{id:para.id,nome:para.nome,preco:para.preco,etiqueta:etqsOf(para)[0]||'',qtd:1,note:null}]);c.lastProduct=para;renderOrder();renderInbox();if(c.step==='menu')c.step='pedido';botSay(c,`Feito! Troquei *${de.nome}* por *${para.nome}*. ✅\nDeseja mais alguma coisa?`,600);return;}
   botSay(c,'Não consegui identificar os itens da troca 😕.\nDeseja falar com um atendente? Digite *3*.',600);
 }
 function corrigirPedido(c,novos){
@@ -930,6 +953,7 @@ function adicionarNoFluxo(c,itens){
   const avs=[];
   if(itens.indisponiveis&&itens.indisponiveis.length)avs.push(msgIndisponivel(itens.indisponiveis));
   if(itens.ambiguos&&itens.ambiguos.length)avs.push(msgAmbiguo(itens.ambiguos));
+  if(itens.semTamanho&&itens.semTamanho.length){const ps=itens.semTamanho[0];c.pendingSize=ps;c.lastProduct=ps.item;avs.push(`*${ps.item.nome}* tem os tamanhos ${chipsDe(ps.item)} — qual você quer?`);}
   const aviso=avs.length?avs.join('\n')+'\n\n':'';
   if(c.step==='endereco')botSay(c,aviso+'Adicionei ✅ Seu pedido até agora:\n'+describe(c.cart)+'\nVoltando: qual o *endereço de entrega*?',600);
   else if(c.step==='pagamento')botSay(c,aviso+'Adicionei ✅ Seu pedido até agora:\n'+describe(c.cart)+'\n*Como prefere pagar?* 1 Pix · 2 Dinheiro · 3 Cartão',600);
@@ -945,9 +969,19 @@ function responderAmbiguo(c,list){
 function responderIndisponivel(c,list){
   if(c.step==='menu')c.step='pedido';
   let msg=msgIndisponivel(list);
-  if(list.length===1){const it=list[0].item;c.pendingAdd=it;c.lastProduct=it;msg+=`\n\nQuer que eu anote *${it.nome}* {{etq:${it.etiqueta}}}? (sim / não)`;}
+  if(list.length===1){
+    const it=list[0].item;const sizes=etqsOf(it);c.lastProduct=it;
+    if(sizes.length>1){c.pendingSize={item:it,qtd:1,note:null};msg+='\n\nQual desses você quer? 😊';}
+    else{c.pendingAdd=it;msg+=`\n\nQuer que eu anote *${it.nome}* ${chipsDe(it)}? (sim / não)`;}
+  }
   else msg+='\n\nQuer escolher outra opção do cardápio? 😊';
   botSay(c,msg,600);
+}
+// produto com várias etiquetas e cliente não disse o tamanho → pergunta, sem anotar
+function responderSemTamanho(c,pendentes){
+  if(c.step==='menu')c.step='pedido';
+  const ps=pendentes[0];c.pendingSize=ps;c.lastProduct=ps.item;
+  botSay(c,`*${ps.item.nome}* tem os tamanhos ${chipsDe(ps.item)} — qual você quer? 😊`,600);
 }
 const saudar=c=>botSay(c,`Olá! 👋 Seja bem-vindo(a) à *${R().nome}*! 😊\nÉ só me dizer seu pedido (ex.: "uma marmita de frango") ou escolher:\n${opcoes()}`,500);
 
@@ -963,7 +997,8 @@ function interpretar(text,estado,c){
     if(/(^|\b)(3|cart[ãa]o|cr[ée]dito|d[ée]bito|maquin)/.test(v))return{intent:'PAGAMENTO',forma:'Cartão'};
   }
   if(estado==='comprovante'&&/comprovante|enviei|mandei|paguei|pago|anexo|print|recibo|🧾|^ok$/.test(v))return{intent:'COMPROVANTE'};
-  if(estado==='endereco'&&text.trim().length>=8&&/\d/.test(text))return{intent:'ENDERECO',endereco:text.trim()};
+  // endereço válido: nome de rua (palavra com 3+ letras) + número (1–5 dígitos) — "sempre nesse formato"
+  if(estado==='endereco'&&text.trim().length>=8&&/[a-záéíóúâêôãõç]{3,}/i.test(text)&&/\b\d{1,5}\b/.test(text))return{intent:'ENDERECO',endereco:text.trim()};
 
   // atendente (palavra sempre; "3" só vale como atendente no MENU)
   if(/\batendente\b|\bhumano\b|pessoa de verdade|falar com (alguem|alguém|atendente|gente|uma pessoa)/.test(v))return{intent:'ATENDENTE'};
@@ -1001,6 +1036,7 @@ function interpretar(text,estado,c){
   if(itens.length)return{intent:'ADICIONAR',itens};
   if(itens.indisponiveis.length)return{intent:'INDISPONIVEL',indisponiveis:itens.indisponiveis};
   if(itens.ambiguos.length)return{intent:'AMBIGUO',ambiguos:itens.ambiguos};
+  if(itens.semTamanho.length)return{intent:'SEM_TAMANHO',pendentes:itens.semTamanho};
   // pedido genérico de bebida ("uma bebida", "um suco") → lista as opções em vez de chutar
   if(/\b(bebida|refrigerante|suco)s?\b/.test(v)){const bs=R().cardapio.filter(isBebida);if(bs.length)return{intent:'AMBIGUO',ambiguos:[{termo:'bebida',opcoes:bs}]};}
 
@@ -1011,9 +1047,25 @@ function interpretar(text,estado,c){
 
 /* ===== CAMADA BACKEND: controla ESTADO, pedido único, fluxo e respostas ===== */
 function processarIntent(c,r,text){
+  // aguardando o TAMANHO de um produto com várias etiquetas (pendingSize)
+  if(c.pendingSize){
+    const ps=c.pendingSize;const sizes=etqsOf(ps.item);
+    const pedida=tamanhoPedido(text.toLowerCase());
+    const own=pedida&&sizes.find(s=>s.toLowerCase()===pedida);
+    if(own){
+      c.pendingSize=null;
+      const item={id:ps.item.id,nome:ps.item.nome,preco:ps.item.preco,etiqueta:own,qtd:ps.qtd||1,note:ps.note||null};
+      addItems(c,[item]);c.lastProduct=ps.item;renderOrder();renderInbox();return confirmAndSuggest(c,[item]);
+    }
+    c.pendingSize=null; // não respondeu um tamanho válido → segue o fluxo normal
+  }
   // produto oferecido aguardando confirmação (pendingAdd)
   if(c.pendingAdd){
-    if(r.intent==='SIM'){const it=c.pendingAdd;c.pendingAdd=null;const item={id:it.id,nome:it.nome,preco:it.preco,etiqueta:it.etiqueta,qtd:parseQty(text.toLowerCase()),note:parseNote(text.toLowerCase())};addItems(c,[item]);c.lastProduct=it;renderOrder();renderInbox();return confirmAndSuggest(c,[item]);}
+    if(r.intent==='SIM'){
+      const it=c.pendingAdd;c.pendingAdd=null;const sizes=etqsOf(it);
+      if(sizes.length>1){c.pendingSize={item:it,qtd:parseQty(text.toLowerCase()),note:parseNote(text.toLowerCase())};c.lastProduct=it;return botSay(c,`*${it.nome}* tem os tamanhos ${chipsDe(it)} — qual você quer? 😊`,500);}
+      const item={id:it.id,nome:it.nome,preco:it.preco,etiqueta:sizes[0]||'',qtd:parseQty(text.toLowerCase()),note:parseNote(text.toLowerCase())};addItems(c,[item]);c.lastProduct=it;renderOrder();renderInbox();return confirmAndSuggest(c,[item]);
+    }
     if(r.intent==='NAO'){c.pendingAdd=null;if(c.step==='menu')c.step='pedido';return botSay(c,'Tudo bem! 🙂 Deseja mais alguma coisa ou finalizar?',500);}
     c.pendingAdd=null; // qualquer outra intenção → segue o fluxo normal
   }
@@ -1031,6 +1083,7 @@ function processarIntent(c,r,text){
     case 'CORRIGIR':return corrigirPedido(c,r.itens);
     case 'INDISPONIVEL':return responderIndisponivel(c,r.indisponiveis);
     case 'AMBIGUO':return responderAmbiguo(c,r.ambiguos);
+    case 'SEM_TAMANHO':return responderSemTamanho(c,r.pendentes);
     case 'SAUDACAO':return saudar(c);
   }
 
@@ -1055,6 +1108,11 @@ function processarIntent(c,r,text){
           c.typing=true;renderConversa();
           resolverZona(c).then(z=>{
             c.typing=false;
+            if(c.enderecoNaoEncontrado){
+              c.endereco='';renderOrder();renderInbox();
+              botSay(c,'Não encontrei esse endereço na nossa região 🤔\nConfere se está certinho e me manda de novo no formato: *rua, número e bairro*\n(ex.: Rua das Flores, 123, Centro)',300);
+              return; // permanece no passo 'endereco'
+            }
             if(c.foraCobertura){
               c.endereco='';renderOrder();renderInbox();
               botSay(c,'Desculpe 😕 Acho que não entregamos para a sua região. Vou te encaminhar para um atendente.',300);
@@ -1070,7 +1128,7 @@ function processarIntent(c,r,text){
         return askPayment(c);
       }
       if(r.intent==='ADICIONAR')return adicionarNoFluxo(c,r.itens);
-      return botSay(c,'Preciso de um endereço com rua e número, por favor 🙏',500);
+      return botSay(c,'Preciso do endereço no formato: *rua, número e bairro* 🙏\n(ex.: Rua das Flores, 123, Centro)',500);
     case 'pagamento':
       if(r.intent==='PAGAMENTO')return aplicarPagamento(c,r.forma);
       if(r.intent==='ADICIONAR')return adicionarNoFluxo(c,r.itens);
@@ -1285,7 +1343,7 @@ function rowHtml(it,tipo){
   return `<div class="menu-row" data-id="${it.id}">
     <input data-f="nome" value="${esc(it.nome)}" placeholder="${tipo==='bebida'?'Nome da bebida':'Nome do prato'}" />
     <input data-f="preco" type="number" min="0" step="0.5" value="${it.preco}" />
-    <select data-f="etiqueta"><option value=""${it.etiqueta?'':' selected'}>—</option>${opts.map(e=>`<option value="${e}"${it.etiqueta===e?' selected':''}>${e}</option>`).join('')}</select>
+    <div class="etq-picker">${opts.map(e=>`<button type="button" class="etq-pick${etqsOf(it).includes(e)?' on':''}" data-etq="${e}">${e}</button>`).join('')}</div>
     <input data-f="palavras" value="${esc(it.palavras)}" placeholder="${tipo==='bebida'?'ex.: coca, lata':'ex.: frango, grelhado'}" />
     <button class="icon-del" title="Remover"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg></button>
   </div>`;
@@ -1294,6 +1352,14 @@ function bindRows(box){
   box.querySelectorAll('.menu-row').forEach(row=>{
     const id=+row.dataset.id;
     row.querySelectorAll('input,select').forEach(inp=>inp.addEventListener('input',()=>{const it=draft.cardapio.find(x=>x.id===id);if(!it)return;const f=inp.dataset.f;it[f]=f==='preco'?(parseFloat(inp.value)||0):inp.value;markDirty();updateMenuCount();}));
+    // etiquetas múltiplas: cada chip liga/desliga um tamanho (guarda "P+M+G")
+    row.querySelectorAll('.etq-pick').forEach(bt=>bt.onclick=()=>{
+      const it=draft.cardapio.find(x=>x.id===id);if(!it)return;
+      const set=etqsOf(it);const e=bt.dataset.etq;const i=set.indexOf(e);
+      if(i>=0)set.splice(i,1);else set.push(e);
+      it.etiqueta=etqOptions(it.tipo).filter(x=>set.includes(x)).join('+'); // mantém a ordem P<M<G / lata<600<2L
+      bt.classList.toggle('on',set.includes(e));markDirty();
+    });
     row.querySelector('.icon-del').onclick=()=>{draft.cardapio=draft.cardapio.filter(x=>x.id!==id);renderMenu();markDirty();};
   });
 }
@@ -1516,7 +1582,7 @@ function geocode(q,bounds){
   if(bounds)url+='&bounded=1&viewbox='+bounds.minLng+','+bounds.maxLat+','+bounds.maxLng+','+bounds.minLat;
   return fetch(url,{headers:{'Accept':'application/json'}}).then(r=>r.json())
     .then(a=>{const it=a&&a[0];const g=it?{lat:+it.lat,lng:+it.lon,nome:it.display_name,address:it.address||{}}:null;_geoCache[key]=g;return g;})
-    .catch(()=>null);
+    .catch(()=>({erro:true})); // falha de rede ≠ endereço inexistente (não cacheia)
 }
 // reverse-geocode → "Cidade, Estado" do ponto da loja
 function reverseCidade(lat,lng){
@@ -1562,16 +1628,17 @@ function clampZona(z){if(!areasCfg().length){z.foraMalha=false;return z;}const a
 function clampTodasZonas(){mapaCfg().zonas.forEach(clampZona);}
 // resolve cobertura + zona de um endereço → grava c.zonaTaxa/c.zonaNome/c.foraCobertura; devolve a zona (ou null)
 function resolverZona(c){
-  c.zonaTaxa=null;c.zonaNome=null;c.zonaForaArea=false;c.foraCobertura=false;c.geo=null;
+  c.zonaTaxa=null;c.zonaNome=null;c.zonaForaArea=false;c.foraCobertura=false;c.geo=null;c.enderecoNaoEncontrado=false;
   const m=mapaCfg();
   if(!m.entregaDinamica||!c.endereco||(!m.zonas.length&&!areasCfg().length))return Promise.resolve(null);
   return garantirCidade().then(()=>{
     const q=montarQueryEndereco(c.endereco);
     const bounds=coberturaBounds();
-    // 1ª tentativa: restrita à região (resolve ruas homônimas distantes a favor da local)
-    return geocode(q,bounds).then(g=>g||geocode(q,null)); // fallback amplo só se não achar perto
+    // busca SOMENTE na região do restaurante — endereço longe demais não é considerado
+    return geocode(q,bounds);
   }).then(g=>{
-    if(!g)return null;
+    if(g&&g.erro)return null; // sem internet no serviço de mapas → segue sem validar (não trava o pedido)
+    if(!g){c.enderecoNaoEncontrado=true;return null;} // não achou NA REGIÃO → pede o endereço de novo
     c.geo={lat:g.lat,lng:g.lng};
     // 1º filtro: malha de trabalho — fora da cobertura = não entrega
     if(!naCobertura(g.lat,g.lng)){c.foraCobertura=true;return null;}
@@ -1785,6 +1852,7 @@ $('#lojaLocBtn').onclick=()=>{
   const btn=$('#lojaLocBtn');btn.disabled=true;
   geocode(q).then(g=>{
     btn.disabled=false;
+    if(g&&g.erro){st.className='loc-status err';st.textContent='Sem conexão com o serviço de mapas. Tente novamente.';return;}
     if(!g){st.className='loc-status err';st.textContent='Endereço não encontrado. Tente incluir cidade/CEP.';return;}
     m.lat=g.lat;m.lng=g.lng;const cid=cidadeDe(g.address);if(cid)m.cidadeUF=cid;saveDB();
     if(_mapa){_mapa.setView([g.lat,g.lng],15);if(_lojaMarker)_lojaMarker.setLatLng([g.lat,g.lng]);}
