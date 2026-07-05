@@ -681,7 +681,24 @@ function parseQty(c){
   return 1;
 }
 function parseNote(c){const tr=['sem ','com ','bem ','mal ','pouco ','muito ','extra ','capricha','no ponto','ao ponto','bem passad','mal passad'];let idx=-1;for(const t of tr){const i=c.indexOf(t);if(i>=0&&(idx<0||i<idx))idx=i;}return idx>=0?c.slice(idx).trim():null;}
-function parseOrder(text){const t=text.toLowerCase();const chunks=t.split(/\s+e\s+|,|\+|\/|\bmais\b/);const out=[];for(let c of chunks){c=c.trim();if(!c)continue;const it=matchItem(c);if(!it)continue;out.push({id:it.id,nome:it.nome,preco:it.preco,etiqueta:it.etiqueta,qtd:parseQty(c),note:parseNote(c)});}return out;}
+const ETQ_RE=/\b(p|m|g|lata|600|350|310|2l)\b/;
+function parseOrder(text){
+  const t=text.toLowerCase();const chunks=t.split(/\s+e\s+|,|\+|\/|\bmais\b/);const out=[];out.indisponiveis=[];
+  for(let c of chunks){
+    c=c.trim();if(!c)continue;
+    let it=matchItem(c);if(!it)continue;
+    // cliente pediu um tamanho explícito (P/M/G, lata…) que não é o do produto encontrado
+    const em=c.match(ETQ_RE);
+    if(em&&it.etiqueta&&em[1]!==String(it.etiqueta).toLowerCase()){
+      const alt=R().cardapio.find(x=>x.nome===it.nome&&String(x.etiqueta||'').toLowerCase()===em[1]);
+      if(alt)it=alt; // existe o mesmo produto no tamanho pedido → usa ele
+      else{out.indisponiveis.push({nome:it.nome,etq:em[1].length===1?em[1].toUpperCase():em[1],item:it});continue;} // não existe → avisa, NÃO anota
+    }
+    out.push({id:it.id,nome:it.nome,preco:it.preco,etiqueta:it.etiqueta,qtd:parseQty(c),note:parseNote(c)});
+  }
+  return out;
+}
+const msgIndisponivel=list=>list.map(x=>`Não temos *${x.nome}* no tamanho *${x.etq}* 😕 — disponível: {{etq:${x.item.etiqueta}}} (R$ ${brl(x.item.preco)})`).join('\n');
 const describe=items=>items.map(i=>`• ${i.qtd}× ${i.nome}${i.etiqueta?' {{etq:'+i.etiqueta+'}}':''}${i.note?' ('+i.note+')':''}`).join('\n');
 // remove os marcadores {{etq:…}} quando o texto vai para fora do chat (inbox, export)
 const plainEtq=s=>(s+'').replace(/\{\{etq:([^}]+)\}\}/g,'($1)');
@@ -776,7 +793,8 @@ function revisarPedido(c){
 }
 function confirmAndSuggest(c,items){
   if(c.step==='menu')c.step='pedido';
-  let msg='Anotado! ✅\n'+describe(items);
+  const aviso=(items.indisponiveis&&items.indisponiveis.length)?msgIndisponivel(items.indisponiveis)+'\n\n':'';
+  let msg=aviso+'Anotado! ✅ Seu pedido até agora:\n'+describe(c.cart);
   const temMarmita=items.some(i=>!isBebida(i));
   const temBebida=c.cart.some(isBebida);
   if(temMarmita&&!temBebida&&!c.suggested){const b=bebidasDisp();if(b.length){msg+=`\n\n🥤 Quer uma bebida pra acompanhar? Tem ${b.join(', ')}.`;c.suggested=true;}}
@@ -797,14 +815,23 @@ function trocarItem(c,de,para){
 function corrigirPedido(c,novos){
   if(c.cart.length)c.cart.pop(); // substitui o último item — nunca duplica
   addItems(c,novos);c.lastProduct=novos[novos.length-1];renderOrder();renderInbox();if(c.step==='menu')c.step='pedido';
-  botSay(c,`Corrigido! ✅ Agora é:\n${describe(novos)}\n\nMais alguma coisa ou *finalizar*?`,600);
+  botSay(c,`Corrigido! ✅ Seu pedido agora é:\n${describe(c.cart)}\n\nMais alguma coisa ou *finalizar*?`,600);
 }
 function adicionarNoFluxo(c,itens){
   addItems(c,itens);c.lastProduct=itens[itens.length-1];renderOrder();renderInbox();
-  if(c.step==='endereco')botSay(c,'Adicionei ✅\n'+describe(itens)+'\nVoltando: qual o *endereço de entrega*?',600);
-  else if(c.step==='pagamento')botSay(c,'Adicionei ✅\n'+describe(itens)+'\n*Como prefere pagar?* 1 Pix · 2 Dinheiro · 3 Cartão',600);
-  else if(c.step==='comprovante')botSay(c,'Adicionei ✅\n'+describe(itens)+'\nMe avise quando enviar o comprovante 🧾',600);
+  const aviso=(itens.indisponiveis&&itens.indisponiveis.length)?msgIndisponivel(itens.indisponiveis)+'\n\n':'';
+  if(c.step==='endereco')botSay(c,aviso+'Adicionei ✅ Seu pedido até agora:\n'+describe(c.cart)+'\nVoltando: qual o *endereço de entrega*?',600);
+  else if(c.step==='pagamento')botSay(c,aviso+'Adicionei ✅ Seu pedido até agora:\n'+describe(c.cart)+'\n*Como prefere pagar?* 1 Pix · 2 Dinheiro · 3 Cartão',600);
+  else if(c.step==='comprovante')botSay(c,aviso+'Adicionei ✅ Seu pedido até agora:\n'+describe(c.cart)+'\nMe avise quando enviar o comprovante 🧾',600);
   else confirmAndSuggest(c,itens);
+}
+// pedido só com tamanhos indisponíveis → avisa e oferece o tamanho que existe (não anota nada)
+function responderIndisponivel(c,list){
+  if(c.step==='menu')c.step='pedido';
+  let msg=msgIndisponivel(list);
+  if(list.length===1){const it=list[0].item;c.pendingAdd=it;c.lastProduct=it;msg+=`\n\nQuer que eu anote *${it.nome}* {{etq:${it.etiqueta}}}? (sim / não)`;}
+  else msg+='\n\nQuer escolher outra opção do cardápio? 😊';
+  botSay(c,msg,600);
 }
 const saudar=c=>botSay(c,`Olá! 👋 Seja bem-vindo(a) à *${R().nome}*! 😊\nÉ só me dizer seu pedido (ex.: "uma marmita de frango") ou escolher:\n${opcoes()}`,500);
 
@@ -856,6 +883,7 @@ function interpretar(text,estado,c){
   // adicionar itens (antes do "sim" — assim "quero X" vira pedido, não confirmação)
   const itens=parseOrder(text);
   if(itens.length)return{intent:'ADICIONAR',itens};
+  if(itens.indisponiveis.length)return{intent:'INDISPONIVEL',indisponiveis:itens.indisponiveis};
 
   if(/^(sim|s|isso|aham|claro|com certeza|pode ser|bora|ok|blz|beleza|positivo|quero|mais|pode|manda|adiciona)\b/.test(v))return{intent:'SIM'};
   if(RE_SAUDACAO.test(v))return{intent:'SAUDACAO'};
@@ -882,6 +910,7 @@ function processarIntent(c,r,text){
     case 'REMOVER':return removerItem(c,r.produto);
     case 'TROCAR':return trocarItem(c,r.de,r.para);
     case 'CORRIGIR':return corrigirPedido(c,r.itens);
+    case 'INDISPONIVEL':return responderIndisponivel(c,r.indisponiveis);
     case 'SAUDACAO':return saudar(c);
   }
 
