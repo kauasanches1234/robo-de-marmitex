@@ -1029,7 +1029,8 @@ function interpretar(text,estado,c){
 
   // atendente (palavra sempre; "3" só vale como atendente no MENU)
   if(/\batendente\b|\bhumano\b|pessoa de verdade|falar com (alguem|alguém|atendente|gente|uma pessoa)/.test(v))return{intent:'ATENDENTE'};
-  if(estado==='menu'){if(v==='1')return{intent:'VER_CARDAPIO'};if(v==='2')return{intent:'FAZER_PEDIDO'};if(v==='3')return{intent:'ATENDENTE'};}
+  // atalhos 1/2/3 valem enquanto o pedido está sendo montado (no pagamento, 1/2/3 viram Pix/Dinheiro/Cartão)
+  if(estado==='menu'||estado==='pedido'||estado==='mais'||estado==='revisao'){if(v==='1')return{intent:'VER_CARDAPIO'};if(v==='2')return{intent:'FAZER_PEDIDO'};if(v==='3')return{intent:'ATENDENTE'};}
 
   if(/card[aá]pio|\bmenu\b|op[çc][õo]es|quais (sabores|op[çc]|marmit|bebida)|o que (voc[eê]s? )?(tem|teem|vende|tem de)/.test(v))return{intent:'VER_CARDAPIO'};
   if(/fazer (um )?pedido|quero pedir|come[çc]ar (o )?pedido/.test(v))return{intent:'FAZER_PEDIDO'};
