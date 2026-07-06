@@ -747,7 +747,7 @@ function matchCandidatos(chunk){
     if(!ok)for(const k of kwsOf(it)){const re=k.length<=2?new RegExp('\\b'+escRe(k)+'\\b'):new RegExp('\\b'+escRe(k));if(re.test(chunk)){ok=true;break;}}
     if(ok)hits.push(it);
   }
-  if(hits.length)return hits;
+  if(hits.length){hits.via='nome';return hits;}
   const freq=termosDistintivos();
   const tokens=chunk.split(/\s+/).filter(w=>w.length>=4);
   let best=[],bestD=99;
@@ -757,13 +757,14 @@ function matchCandidatos(chunk){
     for(const t of terms)for(const w of tokens){const d=lev(w,t);const thr=t.length>=5?2:1;if(d<=thr&&d<d0)d0=d;}
     if(d0<bestD){bestD=d0;best=[it];}else if(d0<99&&d0===bestD)best.push(it);
   }
-  if(best.length)return best;
+  if(best.length){best.via='nome';return best;}
   const etqM=chunk.match(ETQ_RE);
   if(etqM){
     const etq=etqM[1];
     let cand=R().cardapio.filter(it=>etqsOf(it).some(s=>s.toLowerCase()===etq));
     if(/marmit/.test(chunk))cand=cand.filter(it=>(it.tipo||'marmita')==='marmita');
     else if(/bebida|refri|coca|pepsi|guaran/.test(chunk))cand=cand.filter(it=>it.tipo==='bebida');
+    cand.via='etiqueta'; // cliente NÃO nomeou o produto — só deduzimos pelo tamanho
     return cand;
   }
   return [];
@@ -787,7 +788,7 @@ function tamanhoPedido(c){
   return null;
 }
 function parseOrder(text){
-  const t=text.toLowerCase();const chunks=t.split(/\s+e\s+|,|\+|\/|\bmais\b/);const out=[];out.indisponiveis=[];out.ambiguos=[];out.semTamanho=[];
+  const t=text.toLowerCase();const chunks=t.split(/\s+e\s+|,|\+|\/|\bmais\b/);const out=[];out.indisponiveis=[];out.ambiguos=[];out.semTamanho=[];out.confirmar=[];
   for(let c of chunks){
     c=c.trim();if(!c)continue;
     const cands=matchCandidatos(c);
@@ -795,6 +796,10 @@ function parseOrder(text){
     if(cands.length>1){out.ambiguos.push({termo:c,opcoes:cands});continue;} // incerto → pergunta, NÃO anota
     let it=cands[0];
     const pedida=tamanhoPedido(c);
+    if(cands.via==='etiqueta'){
+      // deduzido só pelo tamanho ("marmita g") → CONFIRMA antes de anotar, nunca adiciona direto
+      out.confirmar.push({item:it,etq:pedida,qtd:parseQty(c),note:parseNote(c)});continue;
+    }
     let sizes=etqsOf(it);
     let etiqueta=sizes[0]||'';
     if(pedida&&sizes.length){
@@ -815,7 +820,7 @@ function parseOrder(text){
 }
 const chipsDe=it=>etqsOf(it).map(s=>'{{etq:'+s+'}}').join(' ');
 const msgIndisponivel=list=>list.map(x=>`Não temos *${x.nome}* no tamanho *${x.etq}* 😕 — disponível: ${chipsDe(x.item)} (R$ ${brl(x.item.preco)})`).join('\n');
-const msgAmbiguo=list=>list.map(x=>`Sobre "${x.termo}": temos ${x.opcoes.map(o=>`*${o.nome}*${o.etiqueta?' {{etq:'+o.etiqueta+'}}':''}`).join(', ')} — qual você prefere?`).join('\n');
+const msgAmbiguo=list=>list.map(x=>`Sobre "${x.termo}": temos ${x.opcoes.map(o=>{const s=chipsDe(o);return `*${o.nome}*${s?' '+s:''}`;}).join(', ')} — qual você prefere?`).join('\n');
 const describe=items=>items.map(i=>`• ${i.qtd}× ${i.nome}${i.etiqueta?' {{etq:'+i.etiqueta+'}}':''}${i.note?' ('+i.note+')':''}`).join('\n');
 // remove os marcadores {{etq:…}} quando o texto vai para fora do chat (inbox, export)
 const plainEtq=s=>(s+'').replace(/\{\{etq:([^}]+)\}\}/g,'($1)');
@@ -862,7 +867,16 @@ const linhaEntrega=c=>{if(R().entregaGratis)return 'Entrega: grátis';if(entrega
 function blocoTotal(c){const sub=orderTotal(c);if(entregaPendente(c))return `*Subtotal: R$ ${brl(sub)}* _(+ entrega conforme o endereço)_`;return `*Total: R$ ${brl(sub+taxa(c))}*`;}
 
 /* ---------- fluxo ---------- */
-const menuTxt=()=>'Cardápio de hoje 🍽️\n'+R().cardapio.map(i=>{const s=chipsDe(i);return `• ${i.nome}${s?' '+s:''} — R$ ${brl(i.preco)}`;}).join('\n')+'\n\nÉ só me dizer o que quer.';
+// cardápio em seções (Marmitas / Bebidas), cada item com seus tamanhos disponíveis
+const menuTxt=()=>{
+  const linha=i=>{const s=chipsDe(i);return `• ${i.nome}${s?' — '+s:''} — R$ ${brl(i.preco)}`;};
+  const marmitas=R().cardapio.filter(i=>(i.tipo||'marmita')==='marmita');
+  const bebidas=R().cardapio.filter(i=>i.tipo==='bebida');
+  let t='Cardápio de hoje 🍽️';
+  if(marmitas.length)t+='\n\n*Marmitas* 🍱\n'+marmitas.map(linha).join('\n');
+  if(bebidas.length)t+='\n\n*Bebidas* 🥤\n'+bebidas.map(linha).join('\n');
+  return t+'\n\nÉ só me dizer o que quer.';
+};
 const menuShort=()=>R().cardapio.map(i=>i.nome).join(', ');
 function greet(c){c.step='menu';botSay(c,`Olá! 👋 Sou o robô da *${R().nome}*.\nÉ só me dizer seu pedido ou escolher:\n\n*1* — Ver cardápio\n*2* — Fazer pedido\n*3* — Falar com atendente`,500);}
 const opcoes=()=>'*1* — Ver cardápio\n*2* — Fazer pedido\n*3* — Falar com atendente';
@@ -926,6 +940,8 @@ function confirmAndSuggest(c,items){
   const ps=(items.semTamanho&&items.semTamanho.length)?items.semTamanho[0]:null;
   let msg=aviso+'Anotado! ✅ Seu pedido até agora:\n'+describe(c.cart);
   if(ps){c.pendingSize=ps;c.lastProduct=ps.item;msg+=`\n\n*${ps.item.nome}* tem os tamanhos ${chipsDe(ps.item)} — qual você quer? 😊`;botSay(c,msg,650);return;}
+  const pc=(items.confirmar&&items.confirmar.length)?items.confirmar[0]:null;
+  if(pc){msg+='\n\n'+armarConfirmacao(c,pc);botSay(c,msg,650);return;}
   const temMarmita=items.some(i=>!isBebida(i));
   const temBebida=c.cart.some(isBebida);
   if(temMarmita&&!temBebida&&!c.suggested){const b=bebidasDisp();if(b.length){msg+=`\n\n🥤 Quer uma bebida pra acompanhar? Tem ${b.join(', ')}.`;c.suggested=true;}}
@@ -954,6 +970,7 @@ function adicionarNoFluxo(c,itens){
   if(itens.indisponiveis&&itens.indisponiveis.length)avs.push(msgIndisponivel(itens.indisponiveis));
   if(itens.ambiguos&&itens.ambiguos.length)avs.push(msgAmbiguo(itens.ambiguos));
   if(itens.semTamanho&&itens.semTamanho.length){const ps=itens.semTamanho[0];c.pendingSize=ps;c.lastProduct=ps.item;avs.push(`*${ps.item.nome}* tem os tamanhos ${chipsDe(ps.item)} — qual você quer?`);}
+  else if(itens.confirmar&&itens.confirmar.length)avs.push(armarConfirmacao(c,itens.confirmar[0]));
   const aviso=avs.length?avs.join('\n')+'\n\n':'';
   if(c.step==='endereco')botSay(c,aviso+'Adicionei ✅ Seu pedido até agora:\n'+describe(c.cart)+'\nVoltando: qual o *endereço de entrega*?',600);
   else if(c.step==='pagamento')botSay(c,aviso+'Adicionei ✅ Seu pedido até agora:\n'+describe(c.cart)+'\n*Como prefere pagar?* 1 Pix · 2 Dinheiro · 3 Cartão',600);
@@ -982,6 +999,16 @@ function responderSemTamanho(c,pendentes){
   if(c.step==='menu')c.step='pedido';
   const ps=pendentes[0];c.pendingSize=ps;c.lastProduct=ps.item;
   botSay(c,`*${ps.item.nome}* tem os tamanhos ${chipsDe(ps.item)} — qual você quer? 😊`,600);
+}
+// cliente não nomeou o produto (deduzido pela etiqueta, ex.: "marmita g") → confirma antes de anotar
+function armarConfirmacao(c,p){
+  const own=p.etq?etqsOf(p.item).find(s=>s.toLowerCase()===p.etq):null;
+  c.pendingAdd=p.item;c.pendingAddPref={etiqueta:own||null,qtd:p.qtd||1,note:p.note||null};c.lastProduct=p.item;
+  return `Você quis dizer *${p.item.nome}* ${own?'{{etq:'+own+'}}':chipsDe(p.item)}? (sim / não)`;
+}
+function responderConfirmarItem(c,pendentes){
+  if(c.step==='menu')c.step='pedido';
+  botSay(c,armarConfirmacao(c,pendentes[0]),600);
 }
 const saudar=c=>botSay(c,`Olá! 👋 Seja bem-vindo(a) à *${R().nome}*! 😊\nÉ só me dizer seu pedido (ex.: "uma marmita de frango") ou escolher:\n${opcoes()}`,500);
 
@@ -1037,6 +1064,7 @@ function interpretar(text,estado,c){
   if(itens.indisponiveis.length)return{intent:'INDISPONIVEL',indisponiveis:itens.indisponiveis};
   if(itens.ambiguos.length)return{intent:'AMBIGUO',ambiguos:itens.ambiguos};
   if(itens.semTamanho.length)return{intent:'SEM_TAMANHO',pendentes:itens.semTamanho};
+  if(itens.confirmar.length)return{intent:'CONFIRMAR_ITEM',pendentes:itens.confirmar};
   // pedido genérico de bebida ("uma bebida", "um suco") → lista as opções em vez de chutar
   if(/\b(bebida|refrigerante|suco)s?\b/.test(v)){const bs=R().cardapio.filter(isBebida);if(bs.length)return{intent:'AMBIGUO',ambiguos:[{termo:'bebida',opcoes:bs}]};}
 
@@ -1062,12 +1090,14 @@ function processarIntent(c,r,text){
   // produto oferecido aguardando confirmação (pendingAdd)
   if(c.pendingAdd){
     if(r.intent==='SIM'){
-      const it=c.pendingAdd;c.pendingAdd=null;const sizes=etqsOf(it);
-      if(sizes.length>1){c.pendingSize={item:it,qtd:parseQty(text.toLowerCase()),note:parseNote(text.toLowerCase())};c.lastProduct=it;return botSay(c,`*${it.nome}* tem os tamanhos ${chipsDe(it)} — qual você quer? 😊`,500);}
-      const item={id:it.id,nome:it.nome,preco:it.preco,etiqueta:sizes[0]||'',qtd:parseQty(text.toLowerCase()),note:parseNote(text.toLowerCase())};addItems(c,[item]);c.lastProduct=it;renderOrder();renderInbox();return confirmAndSuggest(c,[item]);
+      const it=c.pendingAdd;const pref=c.pendingAddPref||null;c.pendingAdd=null;c.pendingAddPref=null;
+      const sizes=etqsOf(it);
+      const etiqueta=(pref&&pref.etiqueta)||(sizes.length<=1?(sizes[0]||''):null);
+      if(etiqueta===null){c.pendingSize={item:it,qtd:(pref&&pref.qtd)||parseQty(text.toLowerCase()),note:(pref&&pref.note)||parseNote(text.toLowerCase())};c.lastProduct=it;return botSay(c,`*${it.nome}* tem os tamanhos ${chipsDe(it)} — qual você quer? 😊`,500);}
+      const item={id:it.id,nome:it.nome,preco:it.preco,etiqueta,qtd:(pref&&pref.qtd)||parseQty(text.toLowerCase()),note:(pref&&pref.note)||parseNote(text.toLowerCase())};addItems(c,[item]);c.lastProduct=it;renderOrder();renderInbox();return confirmAndSuggest(c,[item]);
     }
-    if(r.intent==='NAO'){c.pendingAdd=null;if(c.step==='menu')c.step='pedido';return botSay(c,'Tudo bem! 🙂 Deseja mais alguma coisa ou finalizar?',500);}
-    c.pendingAdd=null; // qualquer outra intenção → segue o fluxo normal
+    if(r.intent==='NAO'){c.pendingAdd=null;c.pendingAddPref=null;if(c.step==='menu')c.step='pedido';return botSay(c,'Tudo bem! 🙂 Deseja mais alguma coisa ou finalizar?',500);}
+    c.pendingAdd=null;c.pendingAddPref=null; // qualquer outra intenção → segue o fluxo normal
   }
 
   // intenções UNIVERSAIS (valem em qualquer estado, mantendo o estado atual)
@@ -1084,6 +1114,7 @@ function processarIntent(c,r,text){
     case 'INDISPONIVEL':return responderIndisponivel(c,r.indisponiveis);
     case 'AMBIGUO':return responderAmbiguo(c,r.ambiguos);
     case 'SEM_TAMANHO':return responderSemTamanho(c,r.pendentes);
+    case 'CONFIRMAR_ITEM':return responderConfirmarItem(c,r.pendentes);
     case 'SAUDACAO':return saudar(c);
   }
 
