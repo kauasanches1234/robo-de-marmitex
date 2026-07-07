@@ -302,6 +302,11 @@
   .etq-picker{display:flex;gap:4px;flex-wrap:wrap;}
   .etq-pick{font-size:10.5px;font-weight:800;padding:4px 9px;border-radius:999px;background:var(--bg);color:var(--faint);border:1px solid var(--line);transition:background .15s,color .15s,border-color .15s;}
   .etq-pick.on{background:var(--primary-soft);color:var(--primary);border-color:transparent;}
+  .preco-multi{display:flex;flex-direction:column;gap:4px;}
+  .pm-row{display:flex;align-items:center;gap:6px;}
+  .pm-etq{font-size:10px;font-weight:800;min-width:26px;color:var(--muted);text-align:right;}
+  .pm-row input{border:1px solid var(--line);border-radius:9px;padding:6px 8px;font-size:12.5px;outline:none;width:100%;}
+  .pm-row input:focus{border-color:var(--primary);}
   .menu-row input,.menu-row select{border:1px solid var(--line);border-radius:9px;padding:8px 10px;font-size:13px;outline:none;width:100%;}
   .menu-row input:focus,.menu-row select:focus{border-color:var(--primary);}
   .icon-del{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;color:var(--faint);background:var(--bg);flex:none;transition:background .15s,color .15s;}
@@ -665,6 +670,10 @@ const ETQ={marmita:['P','M','G'],bebida:['lata','600','2L']};
 const etqOptions=tipo=>ETQ[tipo]||ETQ.marmita;
 // um produto pode ter VÁRIAS etiquetas ("P+M+G"); devolve a lista
 const etqsOf=it=>String((it&&it.etiqueta)||'').split('+').map(s=>s.trim()).filter(Boolean);
+// preço por tamanho (it.precos={P:16,M:18,...}); sem preço específico, vale it.preco
+const precoDe=(it,etq)=>{const p=it&&it.precos&&etq?it.precos[etq]:null;return (p!=null&&p!=='')?+p:(+((it&&it.preco))||0);};
+// "P R$ 16,00 · M R$ 18,00" — tamanhos com seus preços (para cardápio e perguntas)
+const tamanhosPrecos=it=>etqsOf(it).map(s=>`{{etq:${s}}} R$ ${brl(precoDe(it,s))}`).join(' · ');
 function defaultDB(){return{restaurant:{
   nome:'Marmitaria Sabor Caseiro', pixKey:'marmitaria@sabor.com', horario:'11h–15h e 18h–22h',
   taxaEntrega:5, entregaGratis:false, tempoEntrega:'40 min',
@@ -689,7 +698,7 @@ function defaultDB(){return{restaurant:{
 }};}
 let DB; try{DB=JSON.parse(localStorage.getItem(STORE))||defaultDB();}catch(e){DB=defaultDB();}
 // migração leve: garante campos novos em dados antigos
-(function migrate(){const r=DB.restaurant;if(r.entregaGratis===undefined)r.entregaGratis=(+r.taxaEntrega===0);if(r.tempoEntrega===undefined)r.tempoEntrega='40 min';if(!r.mapa)r.mapa={lat:-23.5614,lng:-46.6559,zoom:13,zonas:[{id:1,lat:-23.5614,lng:-46.6559,raio:1500,taxa:5,cor:'#4F46E5'},{id:2,lat:-23.5614,lng:-46.6559,raio:3200,taxa:9,cor:'#16A34A'}]};if(r.mapa.entregaDinamica===undefined)r.mapa.entregaDinamica=true;if(r.mapa.endereco===undefined)r.mapa.endereco='';if(!r.mapa.areas)r.mapa.areas=[{id:1,lat:r.mapa.lat,lng:r.mapa.lng,raio:5000,nome:'Área de cobertura'}];r.cardapio.forEach(i=>{if(i.etiqueta===undefined)i.etiqueta='';if(i.tipo===undefined){i.tipo=/refri|refrigerante|coca|pepsi|guaran|suco|bebida|\blata\b|água|agua|\b2l\b|600/.test(((i.nome||'')+' '+(i.palavras||'')).toLowerCase())?'bebida':'marmita';}});})();
+(function migrate(){const r=DB.restaurant;if(r.entregaGratis===undefined)r.entregaGratis=(+r.taxaEntrega===0);if(r.tempoEntrega===undefined)r.tempoEntrega='40 min';if(!r.mapa)r.mapa={lat:-23.5614,lng:-46.6559,zoom:13,zonas:[{id:1,lat:-23.5614,lng:-46.6559,raio:1500,taxa:5,cor:'#4F46E5'},{id:2,lat:-23.5614,lng:-46.6559,raio:3200,taxa:9,cor:'#16A34A'}]};if(r.mapa.entregaDinamica===undefined)r.mapa.entregaDinamica=true;if(r.mapa.endereco===undefined)r.mapa.endereco='';if(!r.mapa.areas)r.mapa.areas=[{id:1,lat:r.mapa.lat,lng:r.mapa.lng,raio:5000,nome:'Área de cobertura'}];r.cardapio.forEach(i=>{if(i.etiqueta===undefined)i.etiqueta='';if(i.tipo===undefined){i.tipo=/refri|refrigerante|coca|pepsi|guaran|suco|bebida|\blata\b|água|agua|\b2l\b|600/.test(((i.nome||'')+' '+(i.palavras||'')).toLowerCase())?'bebida':'marmita';}if(!i.precos){i.precos={};String(i.etiqueta||'').split('+').map(s=>s.trim()).filter(Boolean).forEach(s=>i.precos[s]=+i.preco||0);}});})();
 let _seq=Math.max(0,...DB.restaurant.cardapio.map(i=>i.id));
 const R=()=>DB.restaurant;
 const saveDB=()=>{try{localStorage.setItem(STORE,JSON.stringify(DB));}catch(e){}};
@@ -814,12 +823,12 @@ function parseOrder(text){
     }else if(!pedida&&sizes.length>1){
       out.semTamanho.push({item:it,qtd:parseQty(c),note:parseNote(c)});continue; // várias etiquetas e nenhuma pedida → pergunta o tamanho
     }
-    out.push({id:it.id,nome:it.nome,preco:it.preco,etiqueta,qtd:parseQty(c),note:parseNote(c)});
+    out.push({id:it.id,nome:it.nome,preco:precoDe(it,etiqueta),etiqueta,qtd:parseQty(c),note:parseNote(c)});
   }
   return out;
 }
 const chipsDe=it=>etqsOf(it).map(s=>'{{etq:'+s+'}}').join(' ');
-const msgIndisponivel=list=>list.map(x=>`Não temos *${x.nome}* no tamanho *${x.etq}* 😕 — disponível: ${chipsDe(x.item)} (R$ ${brl(x.item.preco)})`).join('\n');
+const msgIndisponivel=list=>list.map(x=>`Não temos *${x.nome}* no tamanho *${x.etq}* 😕 — disponível: ${tamanhosPrecos(x.item)}`).join('\n');
 const msgAmbiguo=list=>list.map(x=>`Sobre "${x.termo}": temos ${x.opcoes.map(o=>{const s=chipsDe(o);return `*${o.nome}*${s?' '+s:''}`;}).join(', ')} — qual você prefere?`).join('\n');
 const describe=items=>items.map(i=>`• ${i.qtd}× ${i.nome}${i.etiqueta?' {{etq:'+i.etiqueta+'}}':''}${i.note?' ('+i.note+')':''}`).join('\n');
 // remove os marcadores {{etq:…}} quando o texto vai para fora do chat (inbox, export)
@@ -847,8 +856,15 @@ const clienteDoTelefone=tel=>((DB.clientes||[]).find(x=>x.phone===tel)||null);
 const convSalva=c=>!!clienteDoTelefone(c.phone);
 // avatar: iniciais para contato salvo, silhueta genérica para número desconhecido
 const avatarHtml=c=>{const cli=clienteDoTelefone(c.phone);const ini=(cli&&cli.ini)||c.ini;return ini?esc(ini):'<svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" opacity=".55"><circle cx="12" cy="8" r="4"/><path d="M4 20a8 8 0 0 1 16 0z"/></svg>';};
-function pushMsg(c,who,text){c.messages.push({who,text,time:now()});c.lastAt=Date.now();if(c.id!==currentId&&who!=='cust')c.unread++;renderInbox();if(c.id===currentId){renderConversa();}if(typeof salvarChatsLog==='function')salvarChatsLog();}
-function botSay(c,text,delay=650){c.typing=true;if(c.id===currentId)renderConversa();setTimeout(()=>{c.typing=false;pushMsg(c,'bot',text);},delay);}
+function pushMsg(c,who,text){if(who==='cust')c._botStreak=0;c.messages.push({who,text,time:now()});c.lastAt=Date.now();if(c.id!==currentId&&who!=='cust')c.unread++;renderInbox();if(c.id===currentId){renderConversa();}if(typeof salvarChatsLog==='function')salvarChatsLog();}
+// TRAVA ANTI-LOOP: o robô só fala em RESPOSTA — nunca dispara rajadas. Se algum bug tentar
+// mandar mais de 5 mensagens seguidas sem o cliente falar, as extras são descartadas.
+function botSay(c,text,delay=650){
+  c._botStreak=(c._botStreak||0)+1;
+  if(c._botStreak>5||(c.messages&&c.messages.length>300))return;
+  c.typing=true;if(c.id===currentId)renderConversa();
+  setTimeout(()=>{c.typing=false;pushMsg(c,'bot',text);},delay);
+}
 
 /* ---------- pagamento ---------- */
 const PAGINFO={
@@ -869,7 +885,7 @@ function blocoTotal(c){const sub=orderTotal(c);if(entregaPendente(c))return `*Su
 /* ---------- fluxo ---------- */
 // cardápio em seções (Marmitas / Bebidas), cada item com seus tamanhos disponíveis
 const menuTxt=()=>{
-  const linha=i=>{const s=chipsDe(i);return `• ${i.nome}${s?' — '+s:''} — R$ ${brl(i.preco)}`;};
+  const linha=i=>{const s=etqsOf(i);return s.length?`• ${i.nome} — ${tamanhosPrecos(i)}`:`• ${i.nome} — R$ ${brl(i.preco)}`;};
   const marmitas=R().cardapio.filter(i=>(i.tipo||'marmita')==='marmita');
   const bebidas=R().cardapio.filter(i=>i.tipo==='bebida');
   let t='Cardápio de hoje 🍽️';
@@ -919,7 +935,7 @@ function responderPreco(c,p,text){
   if(!p){botSay(c,`Hmm, não encontrei esse item no cardápio 😕.\n${opcoes()}`,600);return;}
   c.lastProduct=p;c.pendingAdd=p;
   const dispo=/\btem\b|dispon|voc[eê]s? tem|vcs tem/.test((text||'').toLowerCase());
-  botSay(c,`${dispo?'Temos sim! ':''}A *${p.nome}* custa *R$ ${brl(p.preco)}*.\nDeseja adicionar ao seu pedido? (sim / não)`,600);
+  const ts=etqsOf(p);botSay(c,`${dispo?'Temos sim! ':''}${ts.length>1?`A *${p.nome}* custa: ${tamanhosPrecos(p)}.`:`A *${p.nome}* custa *R$ ${brl(precoDe(p,ts[0]||''))}*.`}\nDeseja adicionar ao seu pedido? (sim / não)`,600);
 }
 // só finaliza com carrinho não-vazio + intenção clara (REGRA CRÍTICA)
 function tentarFinalizar(c){
@@ -939,7 +955,7 @@ function confirmAndSuggest(c,items){
   const aviso=avisos.length?avisos.join('\n')+'\n\n':'';
   const ps=(items.semTamanho&&items.semTamanho.length)?items.semTamanho[0]:null;
   let msg=aviso+'Anotado! ✅ Seu pedido até agora:\n'+describe(c.cart);
-  if(ps){c.pendingSize=ps;c.lastProduct=ps.item;msg+=`\n\n*${ps.item.nome}* tem os tamanhos ${chipsDe(ps.item)} — qual você quer? 😊`;botSay(c,msg,650);return;}
+  if(ps){c.pendingSize=ps;c.lastProduct=ps.item;msg+=`\n\n*${ps.item.nome}* tem os tamanhos ${tamanhosPrecos(ps.item)} — qual você quer? 😊`;botSay(c,msg,650);return;}
   const pc=(items.confirmar&&items.confirmar.length)?items.confirmar[0]:null;
   if(pc){msg+='\n\n'+armarConfirmacao(c,pc);botSay(c,msg,650);return;}
   const temMarmita=items.some(i=>!isBebida(i));
@@ -956,7 +972,7 @@ function removerItem(c,p){
   botSay(c,'Não achei esse item no seu pedido 🤔. Quer que eu mostre o que já está anotado?',550);
 }
 function trocarItem(c,de,para){
-  if(de&&para){const idx=c.cart.findIndex(i=>i.id===de.id);if(idx>=0){if(c.cart[idx].qtd>1)c.cart[idx].qtd--;else c.cart.splice(idx,1);}addItems(c,[{id:para.id,nome:para.nome,preco:para.preco,etiqueta:etqsOf(para)[0]||'',qtd:1,note:null}]);c.lastProduct=para;renderOrder();renderInbox();if(c.step==='menu')c.step='pedido';botSay(c,`Feito! Troquei *${de.nome}* por *${para.nome}*. ✅\nDeseja mais alguma coisa?`,600);return;}
+  if(de&&para){const idx=c.cart.findIndex(i=>i.id===de.id);if(idx>=0){if(c.cart[idx].qtd>1)c.cart[idx].qtd--;else c.cart.splice(idx,1);}addItems(c,[{id:para.id,nome:para.nome,preco:precoDe(para,etqsOf(para)[0]||''),etiqueta:etqsOf(para)[0]||'',qtd:1,note:null}]);c.lastProduct=para;renderOrder();renderInbox();if(c.step==='menu')c.step='pedido';botSay(c,`Feito! Troquei *${de.nome}* por *${para.nome}*. ✅\nDeseja mais alguma coisa?`,600);return;}
   botSay(c,'Não consegui identificar os itens da troca 😕.\nDeseja falar com um atendente? Digite *3*.',600);
 }
 function corrigirPedido(c,novos){
@@ -969,7 +985,7 @@ function adicionarNoFluxo(c,itens){
   const avs=[];
   if(itens.indisponiveis&&itens.indisponiveis.length)avs.push(msgIndisponivel(itens.indisponiveis));
   if(itens.ambiguos&&itens.ambiguos.length)avs.push(msgAmbiguo(itens.ambiguos));
-  if(itens.semTamanho&&itens.semTamanho.length){const ps=itens.semTamanho[0];c.pendingSize=ps;c.lastProduct=ps.item;avs.push(`*${ps.item.nome}* tem os tamanhos ${chipsDe(ps.item)} — qual você quer?`);}
+  if(itens.semTamanho&&itens.semTamanho.length){const ps=itens.semTamanho[0];c.pendingSize=ps;c.lastProduct=ps.item;avs.push(`*${ps.item.nome}* tem os tamanhos ${tamanhosPrecos(ps.item)} — qual você quer?`);}
   else if(itens.confirmar&&itens.confirmar.length)avs.push(armarConfirmacao(c,itens.confirmar[0]));
   const aviso=avs.length?avs.join('\n')+'\n\n':'';
   if(c.step==='endereco')botSay(c,aviso+'Adicionei ✅ Seu pedido até agora:\n'+describe(c.cart)+'\nVoltando: qual o *endereço de entrega*?',600);
@@ -998,13 +1014,13 @@ function responderIndisponivel(c,list){
 function responderSemTamanho(c,pendentes){
   if(c.step==='menu')c.step='pedido';
   const ps=pendentes[0];c.pendingSize=ps;c.lastProduct=ps.item;
-  botSay(c,`*${ps.item.nome}* tem os tamanhos ${chipsDe(ps.item)} — qual você quer? 😊`,600);
+  botSay(c,`*${ps.item.nome}* tem os tamanhos ${tamanhosPrecos(ps.item)} — qual você quer? 😊`,600);
 }
 // cliente não nomeou o produto (deduzido pela etiqueta, ex.: "marmita g") → confirma antes de anotar
 function armarConfirmacao(c,p){
   const own=p.etq?etqsOf(p.item).find(s=>s.toLowerCase()===p.etq):null;
   c.pendingAdd=p.item;c.pendingAddPref={etiqueta:own||null,qtd:p.qtd||1,note:p.note||null};c.lastProduct=p.item;
-  return `Você quis dizer *${p.item.nome}* ${own?'{{etq:'+own+'}}':chipsDe(p.item)}? (sim / não)`;
+  return `Você quis dizer *${p.item.nome}* ${own?'{{etq:'+own+'}} (R$ '+brl(precoDe(p.item,own))+')':chipsDe(p.item)}? (sim / não)`;
 }
 function responderConfirmarItem(c,pendentes){
   if(c.step==='menu')c.step='pedido';
@@ -1083,7 +1099,7 @@ function processarIntent(c,r,text){
     const own=pedida&&sizes.find(s=>s.toLowerCase()===pedida);
     if(own){
       c.pendingSize=null;
-      const item={id:ps.item.id,nome:ps.item.nome,preco:ps.item.preco,etiqueta:own,qtd:ps.qtd||1,note:ps.note||null};
+      const item={id:ps.item.id,nome:ps.item.nome,preco:precoDe(ps.item,own),etiqueta:own,qtd:ps.qtd||1,note:ps.note||null};
       addItems(c,[item]);c.lastProduct=ps.item;renderOrder();renderInbox();return confirmAndSuggest(c,[item]);
     }
     c.pendingSize=null; // não respondeu um tamanho válido → segue o fluxo normal
@@ -1094,8 +1110,8 @@ function processarIntent(c,r,text){
       const it=c.pendingAdd;const pref=c.pendingAddPref||null;c.pendingAdd=null;c.pendingAddPref=null;
       const sizes=etqsOf(it);
       const etiqueta=(pref&&pref.etiqueta)||(sizes.length<=1?(sizes[0]||''):null);
-      if(etiqueta===null){c.pendingSize={item:it,qtd:(pref&&pref.qtd)||parseQty(text.toLowerCase()),note:(pref&&pref.note)||parseNote(text.toLowerCase())};c.lastProduct=it;return botSay(c,`*${it.nome}* tem os tamanhos ${chipsDe(it)} — qual você quer? 😊`,500);}
-      const item={id:it.id,nome:it.nome,preco:it.preco,etiqueta,qtd:(pref&&pref.qtd)||parseQty(text.toLowerCase()),note:(pref&&pref.note)||parseNote(text.toLowerCase())};addItems(c,[item]);c.lastProduct=it;renderOrder();renderInbox();return confirmAndSuggest(c,[item]);
+      if(etiqueta===null){c.pendingSize={item:it,qtd:(pref&&pref.qtd)||parseQty(text.toLowerCase()),note:(pref&&pref.note)||parseNote(text.toLowerCase())};c.lastProduct=it;return botSay(c,`*${it.nome}* tem os tamanhos ${tamanhosPrecos(it)} — qual você quer? 😊`,500);}
+      const item={id:it.id,nome:it.nome,preco:precoDe(it,etiqueta),etiqueta,qtd:(pref&&pref.qtd)||parseQty(text.toLowerCase()),note:(pref&&pref.note)||parseNote(text.toLowerCase())};addItems(c,[item]);c.lastProduct=it;renderOrder();renderInbox();return confirmAndSuggest(c,[item]);
     }
     if(r.intent==='NAO'){c.pendingAdd=null;c.pendingAddPref=null;if(c.step==='menu')c.step='pedido';return botSay(c,'Tudo bem! 🙂 Deseja mais alguma coisa ou finalizar?',500);}
     c.pendingAdd=null;c.pendingAddPref=null; // qualquer outra intenção → segue o fluxo normal
@@ -1374,7 +1390,7 @@ function rowHtml(it,tipo){
   const opts=etqOptions(tipo);
   return `<div class="menu-row" data-id="${it.id}">
     <input data-f="nome" value="${esc(it.nome)}" placeholder="${tipo==='bebida'?'Nome da bebida':'Nome do prato'}" />
-    <input data-f="preco" type="number" min="0" step="0.5" value="${it.preco}" />
+    ${(()=>{const ss=etqsOf(it);return ss.length>1?`<div class="preco-multi">${ss.map(s=>`<div class="pm-row"><span class="pm-etq">${s}</span><input data-ps="${s}" type="number" min="0" step="0.5" value="${precoDe(it,s)}" /></div>`).join('')}</div>`:`<input data-f="preco" type="number" min="0" step="0.5" value="${ss.length?precoDe(it,ss[0]):it.preco}" />`;})()}
     <div class="etq-picker">${opts.map(e=>`<button type="button" class="etq-pick${etqsOf(it).includes(e)?' on':''}" data-etq="${e}">${e}</button>`).join('')}</div>
     <input data-f="palavras" value="${esc(it.palavras)}" placeholder="${tipo==='bebida'?'ex.: coca, lata':'ex.: frango, grelhado'}" />
     <button class="icon-del" title="Remover"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg></button>
@@ -1383,14 +1399,16 @@ function rowHtml(it,tipo){
 function bindRows(box){
   box.querySelectorAll('.menu-row').forEach(row=>{
     const id=+row.dataset.id;
-    row.querySelectorAll('input,select').forEach(inp=>inp.addEventListener('input',()=>{const it=draft.cardapio.find(x=>x.id===id);if(!it)return;const f=inp.dataset.f;it[f]=f==='preco'?(parseFloat(inp.value)||0):inp.value;markDirty();updateMenuCount();}));
+    row.querySelectorAll('input[data-f],select').forEach(inp=>inp.addEventListener('input',()=>{const it=draft.cardapio.find(x=>x.id===id);if(!it)return;const f=inp.dataset.f;it[f]=f==='preco'?(parseFloat(inp.value)||0):inp.value;if(f==='preco'){const ss=etqsOf(it);if(ss.length===1){if(!it.precos)it.precos={};it.precos[ss[0]]=it.preco;}}markDirty();updateMenuCount();}));
+    row.querySelectorAll('input[data-ps]').forEach(inp=>inp.addEventListener('input',()=>{const it=draft.cardapio.find(x=>x.id===id);if(!it)return;if(!it.precos)it.precos={};it.precos[inp.dataset.ps]=parseFloat(inp.value)||0;const ss=etqsOf(it);if(ss.length)it.preco=+it.precos[ss[0]]||0;markDirty();}));
     // etiquetas múltiplas: cada chip liga/desliga um tamanho (guarda "P+M+G")
     row.querySelectorAll('.etq-pick').forEach(bt=>bt.onclick=()=>{
       const it=draft.cardapio.find(x=>x.id===id);if(!it)return;
       const set=etqsOf(it);const e=bt.dataset.etq;const i=set.indexOf(e);
       if(i>=0)set.splice(i,1);else set.push(e);
       it.etiqueta=etqOptions(it.tipo).filter(x=>set.includes(x)).join('+'); // mantém a ordem P<M<G / lata<600<2L
-      bt.classList.toggle('on',set.includes(e));markDirty();
+      if(!it.precos)it.precos={};if(set.includes(e)&&it.precos[e]==null)it.precos[e]=+it.preco||0;
+      renderMenu();markDirty();
     });
     row.querySelector('.icon-del').onclick=()=>{draft.cardapio=draft.cardapio.filter(x=>x.id!==id);renderMenu();markDirty();};
   });
@@ -1410,7 +1428,7 @@ function renderPecs(){
 function renderAiPreview(){
   const r=draft||R();
   const entrega=r.entregaGratis?'grátis':'R$ '+brl(r.taxaEntrega);
-  const fmt=arr=>arr.map(i=>`- [${i.etiqueta||'-'}] ${i.nome}: R$ ${brl(i.preco)}  (entende: ${i.palavras||'—'})`).join('\n')||'- (nenhum)';
+  const fmt=arr=>arr.map(i=>{const ss=etqsOf(i);const pr=ss.length?ss.map(k=>`${k} R$ ${brl(precoDe(i,k))}`).join(' · '):'R$ '+brl(i.preco);return `- ${i.nome}: ${pr}  (entende: ${i.palavras||'—'})`;}).join('\n')||'- (nenhum)';
   const marmitas=r.cardapio.filter(i=>(i.tipo||'marmita')==='marmita');
   const bebidas=r.cardapio.filter(i=>i.tipo==='bebida');
   const txt=`# Restaurante: ${r.nome}\n# Horário: ${r.horario} | Pix: ${r.pixKey} | Entrega: ${entrega} | Tempo: ${r.tempoEntrega||'—'}\n\n## MARMITAS (P/M/G)\n${fmt(marmitas)}\n\n## BEBIDAS (lata/600/2L)\n${fmt(bebidas)}\n\n## REGRAS / PECULIARIDADES\n`+(r.peculiaridades.filter(Boolean).map(p=>`- ${p}`).join('\n')||'- (nenhuma)')+`\n\n> Enviado à IA como contexto a cada mensagem do cliente.`;
@@ -1421,6 +1439,8 @@ $('#teachBtn').onclick=()=>{ensinar($('#teachInput').value);$('#teachInput').val
 $('#teachInput').addEventListener('keydown',e=>{if(e.key==='Enter'){ensinar(e.target.value);e.target.value='';}});
 $('#saveBtn').onclick=()=>{
   draft.cardapio=draft.cardapio.filter(i=>(i.nome||'').trim());
+  // normaliza preços por tamanho: mantém só os tamanhos ativos e usa o 1º como preço-base
+  draft.cardapio.forEach(i=>{const ss=etqsOf(i);if(!i.precos)i.precos={};Object.keys(i.precos).forEach(k=>{if(!ss.includes(k))delete i.precos[k];});ss.forEach(k=>{if(i.precos[k]==null)i.precos[k]=+i.preco||0;});if(ss.length)i.preco=+i.precos[ss[0]]||0;});
   draft.peculiaridades=draft.peculiaridades.filter(p=>(p||'').trim());
   if(draft.entregaGratis)draft.taxaEntrega=0;
   DB.restaurant=JSON.parse(JSON.stringify(draft));saveDB();
@@ -1921,7 +1941,7 @@ function checkAccess(){
 }
 
 /* ---------- limpeza automática: remove conversas paradas / pedidos finalizados há ≥ 3 min ---------- */
-const TTL_MS=3*60*1000;
+const TTL_MS=60*1000; // 60s sem interação → conversa expira; nova mensagem do cliente começa do zero
 function limparConversasParadas(){
   sincronizarClientes(true); // SEMPRE sincroniza os contatos salvos ANTES de descartar conversas temporárias
   const agora=Date.now();const antes=convs.length;
@@ -1932,7 +1952,7 @@ function limparConversasParadas(){
     if($('#tabPed')&&$('#tabPed').style.display!=='none')renderPedidos();
   }
 }
-setInterval(limparConversasParadas,30000);
+setInterval(limparConversasParadas,15000);
 
 /* ---------- BOOT ---------- */
 $('#topSub').textContent='Painel do dono · '+R().nome;
