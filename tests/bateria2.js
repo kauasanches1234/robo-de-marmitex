@@ -80,8 +80,11 @@ const check = (nome, cond) => { console.log((cond ? 'PASS' : 'FAIL') + ' | ' + n
   geoResposta = [{ lat: '-23.5614', lon: '-46.6559', display_name: 'Rua Teste, São Paulo', address: {} }];
   await say('Rua Teste, 123, Centro');
   await page.waitForTimeout(1800);
-  const fim = await page.$$eval('#convMsgs .msg.bot', els => els.slice(-2).map(e => e.innerText).join('\n'));
+  const fim = await page.$$eval('#convMsgs .msg.bot', els => els.slice(-3).map(e => e.innerText).join('\n'));
   check('endereço válido acha a zona e segue ao pagamento', /Zona 1/.test(fim) && /como prefere pagar/i.test(fim));
+  check('robô confirma o endereço coletado', /Confirmando seu endereço[\s\S]*Rua Teste, 123, Centro/.test(fim));
+  await say('qual é o meu endereço?');
+  check('"qual meu endereço?" responde o endereço salvo', /Seu endereço de entrega[\s\S]*Rua Teste, 123, Centro/.test(await ultimaBot()));
   await say('2');
   check('pedido fecha em dinheiro', /Pedido confirmado/.test(await ultimaBot()));
 

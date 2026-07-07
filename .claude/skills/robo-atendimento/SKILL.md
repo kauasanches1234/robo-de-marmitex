@@ -288,6 +288,22 @@ Formato de cada entrada: **Categoria · Problema · Causa · Solução · Estrat
 - **Frequência**: marco de produto. **Confiança**: alta.
 - **Atualizado**: 2026-07-07. **Histórico**: v1 envio pelo painel.
 
+### A18 — Pergunta sobre o próprio endereço/dados ≠ pergunta de preço
+- **Categoria**: interpretação de pedido / experiência
+- **Problema**: "qual é o meu endereço?" caía em "não encontrei esse item no
+  cardápio" — e o robô nunca confirmava o endereço coletado.
+- **Causa**: o catch-all de PRECO captura qualquer mensagem terminada em "?";
+  não havia intent para consultar dados da própria conversa.
+- **Solução**: intent `CONSULTAR_ENDERECO` (antes do PRECO) responde o
+  `c.endereco` salvo (ou avisa que ainda não tem); ao coletar o endereço, o
+  robô SEMPRE confirma repetindo "📍 *endereço*" + a zona/taxa.
+- **Estratégia**: perguntas sobre o estado da própria conversa (endereço,
+  pedido, total) têm intents próprios e vêm ANTES de catch-alls genéricos;
+  dado crítico coletado (endereço) deve ser sempre confirmado de volta.
+- **Exemplo real**: "qual e o meu endereco?" → "não encontrei item" (2026-07-08).
+- **Frequência**: 1 caso real. **Confiança**: alta.
+- **Atualizado**: 2026-07-08. **Histórico**: v1 consulta + confirmação de endereço.
+
 ---
 
 ## Processo de testes (inegociável)

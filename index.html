@@ -1102,6 +1102,7 @@ function interpretar(text,estado,c){
   if(/card[aá]pio|\bmenu\b|op[çc][õo]es|quais (sabores|op[çc]|marmit|bebida)|o que (voc[eê]s? )?(tem|teem|vende|tem de)/.test(v))return{intent:'VER_CARDAPIO'};
   if(/fazer (um )?pedido|quero pedir|come[çc]ar (o )?pedido/.test(v))return{intent:'FAZER_PEDIDO'};
   if(/(o que eu (pedi|j[áa] pedi)|meu pedido|qual.*(o )?total|quanto.*(deu|dando|fica|ficou|ta dando|t[áa] dando)|mostra.*pedido|ver (meu )?pedido|^resumo)/.test(v))return{intent:'CONSULTAR'};
+  if(/(meu|o)\s+endere[çc]o|qual.*endere[çc]o|onde.*(vou|vai)?\s*entreg|endere[çc]o.*(certo|correto|anotad)/.test(v))return{intent:'CONSULTAR_ENDERECO'};
   if(/\bentreg(a|am|ar|as|ou)?\b|\bdelivery\b|taxa de entrega|voc[eê]s? entregam|vcs entregam/.test(v))return{intent:'ENTREGA'};
 
   // correções (EDITAM o pedido, nunca duplicam)
@@ -1184,6 +1185,7 @@ function processarIntent(c,r,text){
   switch(r.intent){
     case 'ATENDENTE':return handoff(c);
     case 'CONSULTAR':return showCart(c);
+    case 'CONSULTAR_ENDERECO':return botSay(c,c.endereco?`Seu endereço de entrega é:\n📍 *${c.endereco}*\nEstá correto? Se precisar, é só me mandar o endereço certo 😊`:'Ainda não tenho seu endereço 🙂 Quando chegar essa etapa, é só me mandar: *rua, número e bairro*.',500);
     case 'ENTREGA':return responderEntrega(c);
     case 'VER_CARDAPIO':if(c.step==='menu')c.step='pedido';return botSay(c,menuTxt(),550);
     case 'FAZER_PEDIDO':c.step='pedido';return botSay(c,'Pode mandar! 📝 Ex.: "2 marmitas e uma Coca". O que vai querer?',500);
@@ -1234,12 +1236,13 @@ function processarIntent(c,r,text){
               alertarAtendente(c,'fora_zona');
               return; // permanece no passo 'endereco'
             }
-            if(c.zonaTaxa!=null)botSay(c,`📍 Seu endereço entra na *${c.zonaNome}* — taxa de entrega *R$ ${brl(c.zonaTaxa)}*.`,250);
-            else if(c.zonaForaArea)botSay(c,`📍 Endereço dentro da nossa área — taxa padrão de *R$ ${brl(+R().taxaEntrega||0)}*.`,250);
+            const zlinha=c.zonaTaxa!=null?`\n🛵 *${c.zonaNome}* — taxa de entrega *R$ ${brl(c.zonaTaxa)}*`:(c.zonaForaArea?`\n🛵 Taxa de entrega *R$ ${brl(+R().taxaEntrega||0)}*`:'');
+            botSay(c,`Anotado! Confirmando seu endereço de entrega:\n📍 *${c.endereco}*${zlinha}`,250);
             renderOrder();renderInbox();askPayment(c);
           });
           return;
         }
+        botSay(c,`Anotado! Confirmando seu endereço de entrega:\n📍 *${c.endereco}*`,250);
         return askPayment(c);
       }
       if(r.intent==='ADICIONAR')return adicionarNoFluxo(c,r.itens);
