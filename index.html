@@ -1038,6 +1038,29 @@ function responderConfirmarItem(c,pendentes){
   if(c.step==='menu')c.step='pedido';
   botSay(c,armarConfirmacao(c,pendentes[0]),600);
 }
+// cancela o pedido inteiro (não confunde com remover 1 item)
+function cancelarPedido(c){
+  if(!c.cart.length){botSay(c,'Você ainda não tem itens anotados 🙂. Quando quiser pedir, é só me dizer!',500);return;}
+  c.cart=[];c.pendingAdd=null;c.pendingAddPref=null;c.pendingSize=null;c.step='pedido';
+  renderOrder();renderInbox();
+  botSay(c,'Tudo bem, cancelei seu pedido 🗑️\nQuando quiser, é só me chamar de novo 😊',550);
+}
+// cliente irritado / cobrando: desculpa primeiro; com pedido feito informa o status, senão chama humano
+function responderReclamacao(c){
+  if(c.pagamento){botSay(c,`Desculpa pela espera! 😔 Seu pedido está em preparo 🍱\nTempo estimado: *${R().tempoEntrega||'40 min'}*. Se preferir, digite *3* para falar com um atendente.`,500);return;}
+  botSay(c,'Desculpa por qualquer transtorno! 😔 Já estou te encaminhando para um atendente humano. Um instante…',500);
+  alertarAtendente(c,'atendente');
+}
+// fallback varia a resposta e, na 3ª vez, oferece o atendente (nunca repete a mesma frase seguida)
+function fallbackNaoEntendi(c){
+  c._nEntendi=(c._nEntendi||0)+1;
+  const vs=[
+    `Hmm, não entendi 🤔.\nMe diz seu pedido (ex.: "uma marmita de frango") ou escolha:\n${opcoes()}`,
+    `Essa eu não peguei 😅 Pode escrever de outro jeito?\nEx.: "uma marmita de carne e uma coca".`,
+    `Ainda não consegui entender 😕\nSe preferir, digite *3* que eu chamo um atendente humano pra te ajudar.`,
+  ];
+  return vs[Math.min(c._nEntendi,3)-1];
+}
 const saudar=c=>botSay(c,`Olá! 👋 Seja bem-vindo(a) à *${R().nome}*! 😊\nÉ só me dizer seu pedido (ex.: "uma marmita de frango") ou escolher:\n${opcoes()}`,500);
 
 /* ===== CAMADA "IA": só INTERPRETA a mensagem → devolve a intenção (sem efeitos, não decide o fluxo) ===== */
@@ -1077,6 +1100,15 @@ function interpretar(text,estado,c){
     return{intent:'NAO'};
   }
 
+  // cancelar o pedido INTEIRO (antes do "remover", que também entende "cancela X")
+  if(/(cancela(r)?|apaga(r)?|limpa(r)?|zera(r)?|desiste|desistir)\s*(o |meu |a )?(pedido|tudo|carrinho|compra)?\s*$/.test(v)&&/(pedido|tudo|carrinho|compra|desist)/.test(v))return{intent:'CANCELAR_PEDIDO'};
+  // cliente irritado / cobrando o pedido → prioridade máxima: desculpa + humano
+  if(/\b(demora(ndo|do|ou)?|absurdo|p[eé]ssimo|horr[ií]vel|ridículo|ridiculo|palha[çc]ada|reclama[çc][aã]o|nunca chega|cad[eê]\s+(meu|o)\s+pedido|vou desistir|que raiva|droga)\b/.test(v))return{intent:'RECLAMACAO'};
+  // horário de funcionamento
+  if(/\b(hor[aá]rio|que horas|abre[m]?|fecha[m]?|funciona(m|mento)?|abert[oa]s?|fechad[oa]s?)\b/.test(v))return{intent:'HORARIO'};
+  // agradecimento (não confundir com confirmação)
+  if(/^\s*(muito\s+)?(obrigad[oa]s?|obg|brigad[oa]o?|vlw|valeu)\b/.test(v))return{intent:'AGRADECER'};
+
   m=v.match(/\b(?:remove|remover|tira|tirar|cancela|cancelar|retira|retirar)\b\s*(?:a |o |as |os |uma |um |meu |minha )?(.*)/);
   if(m){const alvo=m[1].trim();return{intent:'REMOVER',produto:alvo?matchItem(alvo):(c&&c.cart.length?c.cart[c.cart.length-1]:null)};}
 
@@ -1096,7 +1128,10 @@ function interpretar(text,estado,c){
   if(itens.confirmar.length)return{intent:'CONFIRMAR_ITEM',pendentes:itens.confirmar};
   // pedido genérico de bebida ("uma bebida", "um suco") → lista as opções em vez de chutar
   if(/\b(bebida|refrigerante|suco)s?\b/.test(v)){const bs=R().cardapio.filter(isBebida);if(bs.length)return{intent:'AMBIGUO',ambiguos:[{termo:'bebida',opcoes:bs}]};}
+  // pedido genérico de comida ("uma marmita", "quero comida") → lista as marmitas
+  if(/\b(marmitas?|marmitex|comida|almo[çc]o|janta(r)?|prato)\b/.test(v)){const ms=R().cardapio.filter(i=>(i.tipo||'marmita')==='marmita');if(ms.length)return{intent:'AMBIGUO',ambiguos:[{termo:'marmita',opcoes:ms}]};}
 
+  if(/^[👍👌🙏✅🤝]+\s*$/.test(text.trim()))return{intent:'SIM'}; // emoji de confirmação
   if(/^(sim|s|isso|aham|claro|com certeza|pode ser|bora|ok|blz|beleza|positivo|quero|mais|pode|manda|adiciona)\b/.test(v))return{intent:'SIM'};
   if(RE_SAUDACAO.test(v))return{intent:'SAUDACAO'};
   return{intent:'DESCONHECIDO'};
@@ -1144,6 +1179,10 @@ function processarIntent(c,r,text){
     case 'AMBIGUO':return responderAmbiguo(c,r.ambiguos);
     case 'SEM_TAMANHO':return responderSemTamanho(c,r.pendentes);
     case 'CONFIRMAR_ITEM':return responderConfirmarItem(c,r.pendentes);
+    case 'CANCELAR_PEDIDO':return cancelarPedido(c);
+    case 'RECLAMACAO':return responderReclamacao(c);
+    case 'HORARIO':return botSay(c,`Nosso horário de funcionamento: *${R().horario}* ⏰\nPosso anotar seu pedido? 😊`,500);
+    case 'AGRADECER':return botSay(c,'Imagina! 😊 Precisando, é só chamar.',450);
     case 'SAUDACAO':return saudar(c);
   }
 
@@ -1154,7 +1193,7 @@ function processarIntent(c,r,text){
       if(r.intent==='ADICIONAR')return adicionarNoFluxo(c,r.itens);
       if(r.intent==='SIM'){c.step='pedido';return botSay(c,'Pode mandar o próximo item 😄',400);}
       if(r.intent==='NAO'||r.intent==='FINALIZAR')return tentarFinalizar(c);
-      return botSay(c,`Hmm, não entendi 🤔.\nMe diz seu pedido (ex.: "uma marmita de frango") ou escolha:\n${opcoes()}`,600);
+      return botSay(c,fallbackNaoEntendi(c),600);
     case 'revisao':
       if(r.intent==='ADICIONAR')return adicionarNoFluxo(c,r.itens);
       if(r.intent==='SIM'||r.intent==='FINALIZAR')return askAddress(c);
