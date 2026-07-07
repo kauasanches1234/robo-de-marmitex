@@ -31,9 +31,9 @@ const check = (nome, cond) => { console.log((cond ? 'PASS' : 'FAIL') + ' | ' + n
   await say('sim'); check('pendingAdd anota e mostra pedido completo', /Seu pedido até agora:[\s\S]*Marmita Fitness/.test(await ultimaBot()));
   await say('um refri'); check('ambíguo pergunta opções', /qual você prefere\?/.test(await ultimaBot()));
   await say('guarana'); check('resolve ambiguidade', /Guaraná/.test(await ultimaBot()));
-  await say('marmita de frang g'); check('tamanho indisponível avisa sem anotar', /Não temos \*Marmita de Frango\* no tamanho \*G\*/.test(await ultimaBot()));
+  await say('marmita de frang g'); check('tamanho indisponível avisa sem anotar', /Não temos Marmita de Frango no tamanho G/.test(await ultimaBot()));
   await say('não'); check('recusa a oferta', /Tudo bem/.test(await ultimaBot()));
-  await say('tira o guarana'); check('remove item', /Removi \*Guaraná\*/.test(await ultimaBot()));
+  await say('tira o guarana'); check('remove item', /Removi Guaraná/.test(await ultimaBot()));
   await say('meu pedido'); check('consulta mostra carrinho', /Marmita Fitness/.test(await ultimaBot()));
   await say('finalizar'); check('revisão do pedido', /Revisão do seu pedido/.test(await ultimaBot()));
   await say('confirmar'); check('pede endereço', /endereço de entrega/.test(await ultimaBot()));

@@ -24,7 +24,7 @@ const check = (nome, cond) => { console.log((cond ? 'PASS' : 'FAIL') + ' | ' + n
   await page.click('#newConvBtn');
   await page.waitForTimeout(1200);
   await say('Marmita g');
-  check('"marmita g" pede confirmação', /Você quis dizer \*Marmita de Carne\*/.test(await ultimaBot()));
+  check('"marmita g" pede confirmação', /Você quis dizer Marmita de Carne/.test(await ultimaBot()));
   const semCarrinho = await page.$eval('#orderList', e => e.innerText);
   check('nada anotado antes do sim', /Nenhum item ainda/.test(semCarrinho));
   await say('não');

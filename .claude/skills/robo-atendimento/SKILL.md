@@ -256,6 +256,38 @@ Formato de cada entrada: **Categoria · Problema · Causa · Solução · Estrat
 - **Frequência**: 2 casos. **Confiança**: alta.
 - **Atualizado**: 2026-07-06. **Histórico**: v1.
 
+### A16 — Formatação WhatsApp renderizada no chat
+- **Categoria**: experiência de atendimento
+- **Problema**: mensagens exibiam `*Marmitas*` com asteriscos crus, e o cardápio
+  com 3 preços quebrava linha de forma ilegível.
+- **Causa**: o simulador não renderizava a marcação do WhatsApp; preços por
+  tamanho na mesma linha do nome estouravam a largura do balão.
+- **Solução**: `buildBubble` converte `*negrito*`/`_itálico_`/`~riscado~` (após
+  `esc()`, antes dos chips); cardápio põe os tamanhos em linha própria indentada;
+  prévia do inbox remove os asteriscos.
+- **Estratégia**: o simulador deve espelhar EXATAMENTE como o WhatsApp real
+  renderiza — o texto das mensagens já usa a sintaxe oficial (`*b*`, `_i_`, `~s~`).
+- **Exemplo real**: print do dono com `*Marmitas*` cru (2026-07-07).
+- **Frequência**: 1 caso real. **Confiança**: alta.
+- **Atualizado**: 2026-07-07. **Histórico**: v1.
+
+### A17 — Integração WhatsApp: enviar ≠ receber
+- **Categoria**: integração/arquitetura
+- **Problema**: conectar o robô ao WhatsApp real a partir de um site estático.
+- **Causa/limite**: a Cloud API da Meta permite ENVIAR do navegador
+  (`graph.facebook.com` aceita CORS), mas RECEBER exige webhook (servidor).
+- **Solução (parcial, Fase 1.5)**: painel Clientes envia mensagem de teste real
+  (`POST /v21.0/{phoneId}/messages`, token Bearer); número normalizado para
+  E.164 com DDI 55; sucesso marca Conectado; erros da Meta são mostrados.
+  Guia completo em `docs/FASE2-WHATSAPP.md`.
+- **Estratégia**: recebimento e segredos vão para Supabase Edge Functions
+  (webhook + token em secrets). NUNCA colocar token em código/commit — o token
+  digitado fica só no localStorage do aparelho e isso é aceitável apenas para
+  o número de teste.
+- **Exemplo real**: pedido do dono "integre a api do whatsapp" (2026-07-07).
+- **Frequência**: marco de produto. **Confiança**: alta.
+- **Atualizado**: 2026-07-07. **Histórico**: v1 envio pelo painel.
+
 ---
 
 ## Processo de testes (inegociável)

@@ -80,8 +80,8 @@ const check = (nome, cond) => { console.log((cond ? 'PASS' : 'FAIL') + ' | ' + n
   await page.click('#newConvBtn'); await page.waitForTimeout(1100);
   await say('cardapio');
   const menu = (await ultimaBot()).replace(/\s+/g, ' ');
-  check('cardápio lista preço de cada tamanho', /Frango — P R\$ 16,00 · M R\$ 18,00 · G R\$ 22,00/.test(menu));
-  check('bebida no cardápio com dois preços', /Pepsi — lata R\$ 6,00 · 600 R\$ 8,00/.test(menu));
+  check('cardápio lista preço de cada tamanho', /Frango\s*P R\$ 16,00 · M R\$ 18,00 · G R\$ 22,00/.test(menu));
+  check('bebida no cardápio com dois preços', /Pepsi\s*lata R\$ 6,00 · 600 R\$ 8,00/.test(menu));
   await say('quanto custa a marmita de frango?');
   check('pergunta de preço responde por tamanho', /P R\$ 16,00 · M R\$ 18,00 · G R\$ 22,00/.test((await ultimaBot()).replace(/\s+/g, ' ')));
   await say('não');
