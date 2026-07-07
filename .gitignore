@@ -9,3 +9,6 @@ Thumbs.db
 
 # config local do Claude Code (não versionar credenciais/estado)
 .claude/settings.local.json
+
+# symlink local usado pelos testes
+tests/node_modules
