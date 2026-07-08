@@ -1707,13 +1707,18 @@ async function waEnviarTeste(){
     const j=await r.json().catch(()=>({}));
     if(r.ok&&j.messages){
       wa.conectado=true;saveDB();renderClientes();
-      st.textContent='✓ Enviada! Deve chegar como "Hello World" no WhatsApp '+para;
-      toast('WhatsApp conectado ✓ template de teste enviado 🎉');
+      const waId=j.contacts&&j.contacts[0]&&j.contacts[0].wa_id;
+      const idMsg=j.messages[0]&&j.messages[0].id?j.messages[0].id.slice(0,18)+'…':'';
+      // wa_id ausente = número não está no WhatsApp / fora da lista de destinatários
+      const diag=waId?`WhatsApp reconheceu o número ${waId}.`:'⚠️ O WhatsApp NÃO reconheceu o número — confira se ele está na lista "Para" da Meta.';
+      st.innerHTML=`✓ Template <b>hello_world</b> aceito (id ${idMsg}).<br>${diag}<br>Se não chegar em ~1 min: mande um "oi" do seu WhatsApp para o número do robô e tente de novo.`;
+      toast('Template enviado — veja o diagnóstico abaixo');
     }else{
       wa.conectado=false;saveDB();renderClientes();
-      const msg=(j.error&&j.error.message)||('HTTP '+r.status);
-      st.textContent='✗ '+msg;
-      toast('A Meta recusou o envio — confira token e IDs');
+      const err=j.error||{};const msg=err.message||('HTTP '+r.status);
+      const code=err.code?` (código ${err.code})`:'';
+      st.textContent='✗ '+msg+code;
+      toast('A Meta recusou o envio — veja o motivo abaixo');
     }
   }catch(e){st.textContent='✗ Sem conexão com a API da Meta';toast('Não consegui falar com a API da Meta 😕');}
   btn.disabled=false;

@@ -13,8 +13,8 @@ const check = (nome, cond) => { console.log((cond ? 'PASS' : 'FAIL') + ' | ' + n
   let metaOk = true, ultimoEnvio = null;
   await page.route('**graph.facebook.com/**', r => {
     ultimoEnvio = { url: r.request().url(), auth: r.request().headers()['authorization'], body: r.request().postDataJSON() };
-    if (metaOk) r.fulfill({ contentType: 'application/json', body: JSON.stringify({ messages: [{ id: 'wamid.TESTE' }] }) });
-    else r.fulfill({ status: 401, contentType: 'application/json', body: JSON.stringify({ error: { message: 'Invalid OAuth access token' } }) });
+    if (metaOk) r.fulfill({ contentType: 'application/json', body: JSON.stringify({ contacts: [{ input: '5511988887777', wa_id: '5511988887777' }], messages: [{ id: 'wamid.TESTE', message_status: 'accepted' }] }) });
+    else r.fulfill({ status: 401, contentType: 'application/json', body: JSON.stringify({ error: { message: 'Invalid OAuth access token', code: 190 } }) });
   });
 
   const say = async txt => { await page.fill('#convInput', txt); await page.press('#convInput', 'Enter'); await page.waitForTimeout(1400); };
@@ -49,7 +49,7 @@ const check = (nome, cond) => { console.log((cond ? 'PASS' : 'FAIL') + ' | ' + n
   check('número de destino normalizado (E.164 com 55)', ultimoEnvio.body.to === '5511988887777');
   check('payload usa template hello_world (entrega no 1º contato)', ultimoEnvio.body.messaging_product === 'whatsapp' && ultimoEnvio.body.type === 'template' && ultimoEnvio.body.template.name === 'hello_world');
   check('status vira Conectado', (await page.$eval('#waStatus', e => e.innerText)) === 'Conectado');
-  check('feedback de sucesso na tela', /✓ Enviada/.test(await page.$eval('#waTesteStatus', e => e.innerText)));
+  check('feedback de sucesso com diagnóstico', /hello_world/.test(await page.$eval('#waTesteStatus', e => e.innerText)) && /reconheceu o número 5511988887777/.test(await page.$eval('#waTesteStatus', e => e.innerText)));
 
   // ===== falha da Meta (token inválido) =====
   metaOk = false;
