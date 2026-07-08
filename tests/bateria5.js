@@ -47,7 +47,7 @@ const check = (nome, cond) => { console.log((cond ? 'PASS' : 'FAIL') + ' | ' + n
   check('chama a Graph API com o Phone Number ID', /graph\.facebook\.com\/v21\.0\/123456789012345\/messages/.test(ultimoEnvio.url));
   check('token vai no header Authorization', ultimoEnvio.auth === 'Bearer EAAG-token-de-teste');
   check('número de destino normalizado (E.164 com 55)', ultimoEnvio.body.to === '5511988887777');
-  check('payload correto (messaging_product + texto)', ultimoEnvio.body.messaging_product === 'whatsapp' && /Robô de Marmitex/.test(ultimoEnvio.body.text.body));
+  check('payload usa template hello_world (entrega no 1º contato)', ultimoEnvio.body.messaging_product === 'whatsapp' && ultimoEnvio.body.type === 'template' && ultimoEnvio.body.template.name === 'hello_world');
   check('status vira Conectado', (await page.$eval('#waStatus', e => e.innerText)) === 'Conectado');
   check('feedback de sucesso na tela', /✓ Enviada/.test(await page.$eval('#waTesteStatus', e => e.innerText)));
 

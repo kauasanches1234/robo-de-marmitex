@@ -20,8 +20,16 @@ como conseguir as credenciais e testar em ~10 minutos, de graça, direto do iPad
    - *Número do robô*: o número de teste da Meta;
    - *Número para teste*: o seu WhatsApp pessoal (com DDD; pode colar com +55);
    - *Phone Number ID* e *Token de acesso*: os copiados no passo 4.
-7. Toque em **Enviar mensagem de teste** → a mensagem "🤖 Teste do Robô de
-   Marmitex…" chega no seu WhatsApp e o status vira **Conectado** ✅.
+7. Toque em **Enviar mensagem de teste** → chega uma mensagem **"Hello World"**
+   no seu WhatsApp e o status vira **Conectado** ✅.
+
+> **Por que "Hello World" e não um texto nosso?** A Cloud API só entrega texto
+> livre depois que o CLIENTE manda a primeira mensagem (janela de 24h). Como
+> primeiro contato, é obrigatório um **template aprovado** — usamos o
+> `hello_world` que já vem pronto. Se você mandar "oi" do seu WhatsApp para o
+> número de teste, a janela abre e aí o robô pode responder em texto livre.
+> Se o painel disser "enviada" mas nada chegar, é quase sempre isto: mande uma
+> mensagem do seu WhatsApp para o número de teste e tente de novo.
 
 ### Se der erro
 

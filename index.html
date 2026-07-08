@@ -1700,13 +1700,15 @@ async function waEnviarTeste(){
     const r=await fetch('https://graph.facebook.com/v21.0/'+pid+'/messages',{
       method:'POST',
       headers:{'Authorization':'Bearer '+tok,'Content-Type':'application/json'},
-      body:JSON.stringify({messaging_product:'whatsapp',to:para,type:'text',text:{body:'🤖 Teste do Robô de Marmitex — conexão com o WhatsApp OK! ✅'}})
+      // primeiro contato PRECISA ser um template aprovado (hello_world) — texto livre
+      // só é entregue dentro da janela de 24h após o cliente mandar mensagem antes.
+      body:JSON.stringify({messaging_product:'whatsapp',to:para,type:'template',template:{name:'hello_world',language:{code:'en_US'}}})
     });
     const j=await r.json().catch(()=>({}));
     if(r.ok&&j.messages){
       wa.conectado=true;saveDB();renderClientes();
-      st.textContent='✓ Enviada! Confira o WhatsApp do número '+para;
-      toast('WhatsApp conectado ✓ mensagem de teste enviada 🎉');
+      st.textContent='✓ Enviada! Deve chegar como "Hello World" no WhatsApp '+para;
+      toast('WhatsApp conectado ✓ template de teste enviado 🎉');
     }else{
       wa.conectado=false;saveDB();renderClientes();
       const msg=(j.error&&j.error.message)||('HTTP '+r.status);

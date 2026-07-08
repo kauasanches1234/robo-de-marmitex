@@ -304,6 +304,22 @@ Formato de cada entrada: **Categoria · Problema · Causa · Solução · Estrat
 - **Frequência**: 1 caso real. **Confiança**: alta.
 - **Atualizado**: 2026-07-08. **Histórico**: v1 consulta + confirmação de endereço.
 
+### A19 — Primeiro contato no WhatsApp exige TEMPLATE
+- **Categoria**: integração WhatsApp
+- **Problema**: o teste retornava sucesso (API aceitava, painel mostrava ✓) mas
+  a mensagem NÃO chegava no celular.
+- **Causa**: a Cloud API só entrega TEXTO LIVRE dentro da janela de 24h aberta
+  quando o CLIENTE manda mensagem primeiro. Como primeiro contato, texto livre é
+  aceito (retorna message id) porém descartado silenciosamente.
+- **Solução**: o botão de teste envia um TEMPLATE aprovado
+  (`type:'template'`, `hello_world`, `en_US`) — templates podem iniciar conversa.
+- **Estratégia**: 1ª mensagem sempre template; texto livre só depois que o
+  cliente responder (janela de 24h). Na Fase 2, o robô responde em texto livre
+  porque o webhook só dispara quando o cliente já mandou mensagem (janela aberta).
+- **Exemplo real**: dono viu "✓ enviada" mas nada chegou no WhatsApp (2026-07-08).
+- **Frequência**: 1 caso real (comum na Cloud API). **Confiança**: alta.
+- **Atualizado**: 2026-07-08. **Histórico**: v1 troca texto→template hello_world.
+
 ---
 
 ## Processo de testes (inegociável)
