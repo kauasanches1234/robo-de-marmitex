@@ -338,13 +338,33 @@ Formato de cada entrada: **Categoria · Problema · Causa · Solução · Estrat
 - **Frequência**: 1 caso real (bloqueio de conta nova para BR). **Confiança**: alta.
 - **Atualizado**: 2026-07-08. **Histórico**: v1 diagnóstico via webhook.
 
+### A21 — Backend Fase 2: webhook Supabase + cérebro único (engine.js)
+- **Categoria**: arquitetura / integração
+- **Problema**: site estático não recebe mensagens; e portar o robô para o
+  backend não pode criar um segundo "cérebro" divergente do front.
+- **Solução**: `supabase/functions/_shared/engine.js` — motor PURO (sem DOM,
+  rede ou banco), JS ESM que roda em Deno (webhook) e Node (testes). Webhook
+  `whatsapp-webhook/index.ts` identifica o restaurante pelo `phone_number_id`,
+  carrega cardápio/config/estado do Postgres, chama `responder()`, envia pela
+  Cloud API e persiste. Schema multi-tenant com RLS em `migrations/`.
+- **Estratégia**: UM cérebro compartilhado (meta: o index.html também importar
+  engine.js). Função `responder(texto, estado, {cardapio,config})` é pura e
+  devolve `{respostas[], estado}`; toda regra da Skill (A01–A20) vale nele.
+  Token só em `supabase secrets`, nunca no Git. Webhook sempre responde 200
+  (senão a Meta reenvia); dedupe por `wam_id`; dispara ≤5 respostas (A10).
+- **Exemplo real**: dono criou Supabase e pediu o backend (2026-07-08).
+- **Frequência**: marco de produto. **Confiança**: alta (engine com 24 testes;
+  webhook ainda não exercitado ponta-a-ponta — depende do deploy do dono).
+- **Atualizado**: 2026-07-08. **Histórico**: v1 engine + webhook + schema + docs.
+
 ---
 
 ## Processo de testes (inegociável)
 
 1. Suba o servidor local: `npx live-server . --port=3457 --no-browser`.
-2. Rode **todas**: `node tests/bateria.js && node tests/bateria2.js &&
-   node tests/bateria3.js && node tests/bateria4.js`.
+2. Rode **todas** (front): `node tests/bateria.js && node tests/bateria2.js &&
+   node tests/bateria3.js && node tests/bateria4.js && node tests/bateria5.js`.
+   E o cérebro do backend (não precisa de servidor): `node tests/engine.test.js`.
 3. Qualquer falha: corrigir → registrar/evoluir aprendizado aqui → rodar TUDO
    de novo. Só publicar (push na `main` → deploy automático) com 100% verde.
 4. Cenário novo de cliente (print/vídeo do dono) → vira teste ANTES da correção.
