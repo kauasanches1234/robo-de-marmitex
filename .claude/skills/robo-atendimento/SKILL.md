@@ -320,6 +320,24 @@ Formato de cada entrada: **Categoria · Problema · Causa · Solução · Estrat
 - **Frequência**: 1 caso real (comum na Cloud API). **Confiança**: alta.
 - **Atualizado**: 2026-07-08. **Histórico**: v1 troca texto→template hello_world.
 
+### A20 — Erro 130497: conta restrita de mensagear no Brasil (verificação)
+- **Categoria**: integração WhatsApp / operação
+- **Problema**: template hello_world aceito (200 OK, painel ✓) mas não chega; o
+  WEBHOOK reportou `status: failed`, código **130497** "Business account is
+  restricted from messaging users in this country".
+- **Causa**: a Meta bloqueia envio para números do Brasil até a conta ter
+  **verificação de negócio**. A resposta síncrona do POST é "aceito"; a falha
+  real só aparece assíncrona no webhook — por isso o painel mostrava sucesso.
+- **Solução**: verificar o negócio em business.facebook.com/settings → Central
+  de Segurança → Iniciar verificação (dados da empresa + CNPJ). Alternativa:
+  adicionar forma de pagamento à WABA. Documentado em docs/FASE2-WHATSAPP.md.
+- **Estratégia**: "aceito pela API" ≠ "entregue" — status de entrega só via
+  webhook. Sem webhook, erros pós-aceite ficam invisíveis. O número do cliente
+  foi reconhecido (`5512992564992`), confirmando que token/IDs/lista estão OK.
+- **Exemplo real**: webhook do dono retornou 130497 (2026-07-08).
+- **Frequência**: 1 caso real (bloqueio de conta nova para BR). **Confiança**: alta.
+- **Atualizado**: 2026-07-08. **Histórico**: v1 diagnóstico via webhook.
+
 ---
 
 ## Processo de testes (inegociável)

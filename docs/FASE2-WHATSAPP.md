@@ -38,6 +38,29 @@ como conseguir as credenciais e testar em ~10 minutos, de graça, direto do iPad
 | `Invalid OAuth access token` | Token vencido (o temporário dura 24h) — gere outro no passo 4 |
 | `Recipient phone number not in allowed list` | Faça o passo 5 (adicionar seu número à lista) |
 | `Object with ID ... does not exist` | Phone Number ID errado |
+| `Business account is restricted from messaging users in this country` (código **130497**) | A conta ainda **não pode enviar para o Brasil** — falta **verificar o negócio** (veja abaixo). A API aceita o envio (200 OK) e a falha só chega no **webhook** como `status: failed`. |
+
+## Erro 130497 — liberar envio para o Brasil (verificação de negócio)
+
+A Meta restringe o envio para números brasileiros até a conta estar verificada.
+Isso é política da Meta, não do nosso código — a integração técnica (token,
+Phone Number ID, envio, webhook) já está funcionando; o número de destino
+inclusive é reconhecido corretamente.
+
+Como liberar:
+
+1. Acesse **business.facebook.com/settings** (Meta Business Suite → Configurações do negócio).
+2. **Central de Segurança** (Security Center) → **Iniciar verificação**.
+3. Informe os dados da empresa (razão social, endereço, telefone) e anexe um
+   documento — no Brasil normalmente o **CNPJ** ou conta de serviço no nome do negócio.
+4. A Meta analisa (de horas a alguns dias). Aprovada a verificação, o 130497 some.
+
+Atalho que às vezes destrava antes da verificação completa: adicionar uma
+**forma de pagamento** à conta WhatsApp Business (WABA) em
+**WhatsApp → Configuração → Faturamento/Pagamentos**.
+
+> Enquanto não verifica, dá para testar mandando para um número de **outro país**
+> (que não tenha a restrição), mas para valer no seu caso o caminho é a verificação.
 
 ## O que já funciona × o que falta
 
