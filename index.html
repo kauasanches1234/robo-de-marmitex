@@ -549,14 +549,16 @@
           <div><h2>Zonas de entrega</h2><p>Defina até onde o motoboy vai (malha de trabalho) e as taxas por região dentro dela</p></div>
         </div>
         <div class="card">
-          <div class="toggle-row" style="margin-bottom:14px">
-            <div class="tt"><div class="h">Entrega dinâmica por região</div><div class="s">Ligado: a taxa é definida pela zona do mapa onde o endereço do cliente cai. Desligado: usa a taxa única da Configuração (mapa desativado).</div></div>
-            <div class="switch blue" id="dynSwitch"></div>
-          </div>
-          <div class="field" style="margin-bottom:0">
-            <label>Endereço do restaurante</label>
-            <div class="addr-set"><input id="lojaEndereco" placeholder="Rua, número, bairro, cidade" /><button class="btn-loc" id="lojaLocBtn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg> Localizar</button></div>
-            <div class="loc-status" id="lojaLocStatus"></div>
+          <div class="card-b">
+            <div class="toggle-row" style="margin-bottom:14px">
+              <div class="tt"><div class="h">Entrega dinâmica por região</div><div class="s">Ligado: a taxa é definida pela zona do mapa onde o endereço do cliente cai. Desligado: usa a taxa única da Configuração (mapa desativado).</div></div>
+              <div class="switch blue" id="dynSwitch"></div>
+            </div>
+            <div class="field" style="margin-bottom:0">
+              <label>Endereço do restaurante</label>
+              <div class="addr-set"><input id="lojaEndereco" placeholder="Rua, número, bairro, cidade" /><button class="btn-loc" id="lojaLocBtn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg> Localizar</button></div>
+              <div class="loc-status" id="lojaLocStatus"></div>
+            </div>
           </div>
         </div>
         <div class="card" style="overflow:hidden"><div id="mapaLeaflet"></div></div>
