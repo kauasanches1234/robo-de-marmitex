@@ -29,6 +29,7 @@ create table if not exists menu_items (
   precos         jsonb default '{}'::jsonb,         -- {"P":16,"M":18,"G":22}
   preco          numeric(10,2) default 0,           -- fallback (sem etiquetas)
   palavras       text default '',
+  dias           int[] default '{0,1,2,3,4,5,6}',   -- dias servidos (0=Dom … 6=Sáb)
   ativo          boolean default true,
   ordem          int default 0
 );

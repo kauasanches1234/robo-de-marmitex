@@ -83,5 +83,12 @@ check('função é pura (não muta o estado recebido)', JSON.stringify(base) ===
 // ===== anti-loop: no máximo 5 respostas por mensagem =====
 check('nunca devolve mais de 5 respostas', responder('finalizar', { step: 'pagamento', cart: [], endereco: 'x', pagamento: null }, ctx).respostas.length <= 5);
 
+// ===== cardápio vazio no dia (motor não quebra) =====
+check('cardápio vazio → avisa e oferece atendente', /não temos itens no cardápio/.test(responder('cardapio', estadoInicial(), { cardapio: [], config }).respostas.join('\n')));
+
+// ===== entrada gigante não quebra nem estoura =====
+const r = responder('a'.repeat(5000), estadoInicial(), ctx);
+check('entrada gigante é tratada sem erro', Array.isArray(r.respostas) && r.respostas.length >= 1);
+
 console.log(`\nRESULTADO: ${pass} pass, ${fail} fail`);
 process.exit(fail ? 1 : 0);

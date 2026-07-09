@@ -357,13 +357,48 @@ Formato de cada entrada: **Categoria · Problema · Causa · Solução · Estrat
   webhook ainda não exercitado ponta-a-ponta — depende do deploy do dono).
 - **Atualizado**: 2026-07-08. **Histórico**: v1 engine + webhook + schema + docs.
 
+### A22 — Cardápio por dia da semana
+- **Categoria**: cardápio / atendimento
+- **Problema**: cardápio fixo não reflete "feijoada só quarta", "fim de semana tem X".
+- **Solução**: cada item tem `dias:[0..6]` (0=Dom). Config: seletor de dia no topo
+  (Todos+7, hoje destacado) filtra a edição; cada item tem 7 chips de dia. O
+  ATENDIMENTO usa `cardapioAtivo()` = itens de HOJE (front: `new Date().getDay()`;
+  backend/webhook: `diaSemanaBR()` no fuso America/Sao_Paulo — NUNCA getDay() do
+  servidor em UTC). Item sem `dias` = todos os dias (retrocompatível). Cardápio
+  vazio no dia → mensagem específica + oferta de atendente.
+- **Estratégia**: DRY — produto cadastrado uma vez, marca-se os dias; nada de 7
+  cardápios duplicados. Dia da semana SEMPRE no fuso do restaurante.
+- **Exemplo real**: pedido do dono "configuração por cada dia da semana" (2026-07-08).
+- **Frequência**: regra de produto. **Confiança**: alta (bateria6 + engine).
+- **Atualizado**: 2026-07-08. **Histórico**: v1 dias por item + seletor + filtro BR.
+
+### A23 — Revisão de segurança do webhook (assinatura HMAC)
+- **Categoria**: segurança (crítico)
+- **Problema**: webhook público (`--no-verify-jwt`, a Meta não manda JWT) aceitava
+  qualquer POST — falsificação de mensagens, spam, custo, poluição do banco.
+- **Solução**: valida `X-Hub-Signature-256` (HMAC-SHA256 do corpo cru com o
+  `WHATSAPP_APP_SECRET`), com comparação de tempo constante, ANTES de parsear o
+  JSON. Sem o secret configurado, loga aviso e passa (não trava o setup) — em
+  produção é OBRIGATÓRIO configurar. Entrada do engine limitada a 1000 chars.
+- **Estratégia**: endpoint público exige autenticar a origem; ler corpo cru,
+  validar, só então confiar. Trade-off do "passa sem secret": conveniência de
+  setup vs. segurança — documentado e avisado em log.
+- **Limitações conhecidas (registrar, corrigir depois)**: (1) condição de corrida
+  se o mesmo cliente manda 2 msgs concorrentes (lost update no estado) — dedupe
+  por wam_id cobre a MESMA msg, não duas distintas; (2) após `step:concluido`,
+  nova msg não reinicia pedido automaticamente.
+- **Exemplo real**: auto-revisão sênior a pedido do dono (2026-07-08).
+- **Frequência**: preventivo. **Confiança**: alta (assinatura); média (webhook
+  ainda não exercitado em runtime Deno).
+- **Atualizado**: 2026-07-08. **Histórico**: v1 assinatura + limites + edge cases.
+
 ---
 
 ## Processo de testes (inegociável)
 
 1. Suba o servidor local: `npx live-server . --port=3457 --no-browser`.
 2. Rode **todas** (front): `node tests/bateria.js && node tests/bateria2.js &&
-   node tests/bateria3.js && node tests/bateria4.js && node tests/bateria5.js`.
+   node tests/bateria3.js && node tests/bateria4.js && node tests/bateria5.js && node tests/bateria6.js`.
    E o cérebro do backend (não precisa de servidor): `node tests/engine.test.js`.
 3. Qualquer falha: corrigir → registrar/evoluir aprendizado aqui → rodar TUDO
    de novo. Só publicar (push na `main` → deploy automático) com 100% verde.

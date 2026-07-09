@@ -15,13 +15,43 @@ import { responder, estadoInicial } from '../_shared/engine.js';
 
 const VERIFY_TOKEN = Deno.env.get('WHATSAPP_VERIFY_TOKEN') ?? '';
 const WA_TOKEN = Deno.env.get('WHATSAPP_TOKEN') ?? '';
+const APP_SECRET = Deno.env.get('WHATSAPP_APP_SECRET') ?? '';
 const GRAPH = 'https://graph.facebook.com/v21.0';
+const enc = new TextEncoder();
+
+// comparação de tempo constante (evita timing attack na checagem da assinatura)
+function seguroIgual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let r = 0; for (let i = 0; i < a.length; i++) r |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return r === 0;
+}
+// valida X-Hub-Signature-256 (HMAC-SHA256 do corpo com o App Secret da Meta).
+// Sem isso o webhook público aceitaria mensagens forjadas. Se APP_SECRET não
+// estiver configurado, loga aviso e deixa passar (para não travar o setup) —
+// em produção, configure SEMPRE (supabase secrets set WHATSAPP_APP_SECRET=...).
+async function assinaturaValida(req: Request, raw: string): Promise<boolean> {
+  if (!APP_SECRET) { console.warn('WHATSAPP_APP_SECRET ausente — assinatura NÃO verificada (inseguro)'); return true; }
+  const sig = req.headers.get('x-hub-signature-256');
+  if (!sig) return false;
+  const key = await crypto.subtle.importKey('raw', enc.encode(APP_SECRET), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const mac = await crypto.subtle.sign('HMAC', key, enc.encode(raw));
+  const hex = 'sha256=' + [...new Uint8Array(mac)].map(b => b.toString(16).padStart(2, '0')).join('');
+  return seguroIgual(hex, sig);
+}
 
 const db = createClient(
   Deno.env.get('SUPABASE_URL')!,
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
   { auth: { persistSession: false } },
 );
+
+// dia da semana (0=Dom … 6=Sáb) no fuso do restaurante — NUNCA usar getDay() do
+// servidor (roda em UTC): à noite no Brasil já seria o dia seguinte lá.
+function diaSemanaBR(tz = 'America/Sao_Paulo'): number {
+  const wd = new Intl.DateTimeFormat('en-US', { weekday: 'short', timeZone: tz }).format(new Date());
+  return { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 }[wd] ?? new Date().getDay();
+}
+const itemServidoHoje = (dias: number[] | null, dow: number) => !dias || dias.length === 0 || dias.includes(dow);
 
 async function enviarTexto(phoneNumberId: string, to: string, body: string) {
   const r = await fetch(`${GRAPH}/${phoneNumberId}/messages`, {
@@ -46,9 +76,11 @@ Deno.serve(async (req) => {
 
   if (req.method !== 'POST') return new Response('ok');
 
-  // responde 200 rápido para a Meta; processa em seguida
+  // lê o corpo cru para validar a assinatura ANTES de confiar no conteúdo
+  const raw = await req.text();
+  if (!(await assinaturaValida(req, raw))) return new Response('invalid signature', { status: 403 });
   let payload: any = {};
-  try { payload = await req.json(); } catch { return new Response('bad json', { status: 400 }); }
+  try { payload = JSON.parse(raw); } catch { return new Response('bad json', { status: 400 }); }
 
   try {
     for (const entry of payload.entry ?? []) {
@@ -75,7 +107,10 @@ Deno.serve(async (req) => {
           // cardápio + config
           const { data: itens } = await db.from('menu_items')
             .select('*').eq('restaurant_id', rest.id).eq('ativo', true).order('ordem');
-          const cardapio = (itens ?? []).map((i: any) => ({ nome: i.nome, tipo: i.tipo, etiqueta: i.etiqueta, precos: i.precos, preco: i.preco, palavras: i.palavras }));
+          const dow = diaSemanaBR();  // cardápio do dia, no fuso do Brasil
+          const cardapio = (itens ?? [])
+            .filter((i: any) => itemServidoHoje(i.dias, dow))
+            .map((i: any) => ({ nome: i.nome, tipo: i.tipo, etiqueta: i.etiqueta, precos: i.precos, preco: i.preco, palavras: i.palavras }));
           const config = { nome: rest.nome, horario: rest.horario, pixKey: rest.pix_key, tempoEntrega: rest.tempo_entrega, taxaEntrega: rest.taxa_entrega, entregaGratis: rest.entrega_gratis };
 
           // conversa (estado) + cliente

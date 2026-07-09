@@ -321,6 +321,18 @@
   .mi-kw-row{display:flex;align-items:center;gap:7px;border-top:1px dashed var(--line);padding-top:9px;color:var(--faint);}
   .mi-kw{flex:1;border:none;outline:none;background:transparent;font-size:12.5px;color:var(--muted);min-width:0;}
   .mi-kw::placeholder{color:var(--faint);}
+  /* seletor de dia da semana (topo do cardápio) */
+  .dia-sel{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;}
+  .dia-sel .dia-chip{font-size:12px;font-weight:700;padding:7px 12px;border-radius:999px;background:var(--bg);color:var(--muted);border:1px solid var(--line);transition:background .18s var(--ease),color .18s var(--ease),border-color .18s var(--ease);}
+  .dia-sel .dia-chip.on{background:var(--primary);color:#fff;border-color:transparent;box-shadow:0 2px 8px rgba(79,70,229,.25);}
+  .dia-sel .dia-chip.hoje:not(.on){border-color:var(--primary);color:var(--primary);}
+  .dia-sel .dia-chip:not(.on):hover{background:#EEF2FF;}
+  /* chips de dia dentro de cada item */
+  .mi-dias{display:flex;align-items:center;gap:6px;flex-wrap:wrap;border-top:1px dashed var(--line);padding-top:9px;}
+  .mi-dias .mid-label{font-size:11px;font-weight:700;color:var(--faint);margin-right:2px;}
+  .mid-chip{font-size:10.5px;font-weight:700;width:34px;padding:4px 0;text-align:center;border-radius:8px;background:var(--bg);color:var(--faint);border:1px solid var(--line);transition:background .15s,color .15s,border-color .15s;}
+  .mid-chip.on{background:var(--primary-soft);color:var(--primary);border-color:transparent;}
+  .menu-vazio{padding:18px;text-align:center;color:var(--faint);font-size:13px;}
   .menu-row input,.menu-row select{border:1px solid var(--line);border-radius:9px;padding:8px 10px;font-size:13px;outline:none;width:100%;}
   .menu-row input:focus,.menu-row select:focus{border-color:var(--primary);}
   .icon-del{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;color:var(--faint);background:var(--bg);flex:none;transition:background .15s,color .15s;}
@@ -616,7 +628,8 @@
         <div class="card">
           <div class="card-h"><div class="ico-box" style="background:var(--ok-soft)"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="#16A34A" stroke-width="2" stroke-linecap="round"><path d="M3 2v7c0 1.1.9 2 2 2a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3zm0 0v7"/></svg></div><h3>Cardápio</h3><span class="step-badge" id="menuCount" style="background:var(--ok-soft);color:var(--ok)">0 itens</span></div>
           <div class="card-b">
-            <div class="note-box" style="margin-bottom:16px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex:none;margin-top:1px"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg><span>Toque em um tamanho (<b>P · M · G</b> ou <b>lata · 600 · 2L</b>) para ativá-lo e defina o <b>preço de cada um</b>. Sem tamanho ativo, vale o preço único. As <b>palavras-chave</b> são o que o robô entende quando o cliente escreve.</span></div>
+            <div class="note-box" style="margin-bottom:14px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex:none;margin-top:1px"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg><span>Escolha o <b>dia da semana</b> para montar o cardápio dele. Toque em um tamanho (<b>P · M · G</b> ou <b>lata · 600 · 2L</b>) para ativá-lo e defina o <b>preço de cada um</b>. Em cada item, marque os <b>dias</b> em que ele é servido.</span></div>
+            <div class="dia-sel" id="menuDiaSel"></div>
 
             <div class="cfg-sub"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg> Marmitas</div>
             <div id="menuRowsMarmita"></div>
@@ -693,6 +706,13 @@ const ETQ={marmita:['P','M','G'],bebida:['lata','600','2L']};
 const etqOptions=tipo=>ETQ[tipo]||ETQ.marmita;
 // um produto pode ter VÁRIAS etiquetas ("P+M+G"); devolve a lista
 const etqsOf=it=>String((it&&it.etiqueta)||'').split('+').map(s=>s.trim()).filter(Boolean);
+// ---- disponibilidade por dia da semana (0=Dom … 6=Sáb) ----
+const DIAS_LABEL=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+// item sem dias definidos = disponível todos os dias (compat. com dados antigos)
+const diasDe=it=>(Array.isArray(it&&it.dias)&&it.dias.length)?it.dias:[0,1,2,3,4,5,6];
+const diaHoje=()=>new Date().getDay();
+// cardápio ativo HOJE — usado em TODO o atendimento (config usa draft.cardapio completo)
+const cardapioAtivo=()=>DB.restaurant.cardapio.filter(i=>diasDe(i).includes(diaHoje()));
 // preço por tamanho (it.precos={P:16,M:18,...}); sem preço específico, vale it.preco
 const precoDe=(it,etq)=>{const p=it&&it.precos&&etq?it.precos[etq]:null;return (p!=null&&p!=='')?+p:(+((it&&it.preco))||0);};
 // "P R$ 16,00 · M R$ 18,00" — tamanhos com seus preços (para cardápio e perguntas)
@@ -721,7 +741,7 @@ function defaultDB(){return{restaurant:{
 }};}
 let DB; try{DB=JSON.parse(localStorage.getItem(STORE))||defaultDB();}catch(e){DB=defaultDB();}
 // migração leve: garante campos novos em dados antigos
-(function migrate(){const r=DB.restaurant;if(r.entregaGratis===undefined)r.entregaGratis=(+r.taxaEntrega===0);if(r.tempoEntrega===undefined)r.tempoEntrega='40 min';if(!r.mapa)r.mapa={lat:-23.5614,lng:-46.6559,zoom:13,zonas:[{id:1,lat:-23.5614,lng:-46.6559,raio:1500,taxa:5,cor:'#4F46E5'},{id:2,lat:-23.5614,lng:-46.6559,raio:3200,taxa:9,cor:'#16A34A'}]};if(r.mapa.entregaDinamica===undefined)r.mapa.entregaDinamica=true;if(r.mapa.endereco===undefined)r.mapa.endereco='';if(!r.mapa.areas)r.mapa.areas=[{id:1,lat:r.mapa.lat,lng:r.mapa.lng,raio:5000,nome:'Área de cobertura'}];r.cardapio.forEach(i=>{if(i.etiqueta===undefined)i.etiqueta='';if(i.tipo===undefined){i.tipo=/refri|refrigerante|coca|pepsi|guaran|suco|bebida|\blata\b|água|agua|\b2l\b|600/.test(((i.nome||'')+' '+(i.palavras||'')).toLowerCase())?'bebida':'marmita';}if(!i.precos){i.precos={};String(i.etiqueta||'').split('+').map(s=>s.trim()).filter(Boolean).forEach(s=>i.precos[s]=+i.preco||0);}});})();
+(function migrate(){const r=DB.restaurant;if(r.entregaGratis===undefined)r.entregaGratis=(+r.taxaEntrega===0);if(r.tempoEntrega===undefined)r.tempoEntrega='40 min';if(!r.mapa)r.mapa={lat:-23.5614,lng:-46.6559,zoom:13,zonas:[{id:1,lat:-23.5614,lng:-46.6559,raio:1500,taxa:5,cor:'#4F46E5'},{id:2,lat:-23.5614,lng:-46.6559,raio:3200,taxa:9,cor:'#16A34A'}]};if(r.mapa.entregaDinamica===undefined)r.mapa.entregaDinamica=true;if(r.mapa.endereco===undefined)r.mapa.endereco='';if(!r.mapa.areas)r.mapa.areas=[{id:1,lat:r.mapa.lat,lng:r.mapa.lng,raio:5000,nome:'Área de cobertura'}];r.cardapio.forEach(i=>{if(i.etiqueta===undefined)i.etiqueta='';if(i.tipo===undefined){i.tipo=/refri|refrigerante|coca|pepsi|guaran|suco|bebida|\blata\b|água|agua|\b2l\b|600/.test(((i.nome||'')+' '+(i.palavras||'')).toLowerCase())?'bebida':'marmita';}if(!i.precos){i.precos={};String(i.etiqueta||'').split('+').map(s=>s.trim()).filter(Boolean).forEach(s=>i.precos[s]=+i.preco||0);}if(!Array.isArray(i.dias)||!i.dias.length)i.dias=[0,1,2,3,4,5,6];});})();
 let _seq=Math.max(0,...DB.restaurant.cardapio.map(i=>i.id));
 const R=()=>DB.restaurant;
 const saveDB=()=>{try{localStorage.setItem(STORE,JSON.stringify(DB));}catch(e){}};
@@ -740,12 +760,12 @@ const termosDe=it=>[...kwsOf(it),...((it.nome||'').toLowerCase().split(/\s+/))].
 // termos que identificam UM único produto (descarta genéricos como "marmita", "refri")
 function termosDistintivos(){
   const freq={};
-  for(const it of R().cardapio){const seen=new Set();for(const t of termosDe(it)){if(!seen.has(t)){seen.add(t);freq[t]=(freq[t]||0)+1;}}}
+  for(const it of cardapioAtivo()){const seen=new Set();for(const t of termosDe(it)){if(!seen.has(t)){seen.add(t);freq[t]=(freq[t]||0)+1;}}}
   return freq;
 }
 function matchItem(chunk){
   // 1) exato: nome ou palavra-chave (sigla curta = exata; termo maior = prefixo)
-  for(const it of R().cardapio){
+  for(const it of cardapioAtivo()){
     if(it.nome&&chunk.includes(it.nome.toLowerCase()))return it;
     for(const k of kwsOf(it)){const re=k.length<=2?new RegExp('\\b'+escRe(k)+'\\b'):new RegExp('\\b'+escRe(k));if(re.test(chunk))return it;}
   }
@@ -755,7 +775,7 @@ function matchItem(chunk){
   const freq=termosDistintivos();
   const tokens=chunk.split(/\s+/).filter(w=>w.length>=4);
   let best=null,bestD=99;
-  for(const it of R().cardapio){
+  for(const it of cardapioAtivo()){
     const terms=termosDe(it).filter(t=>freq[t]===1);
     for(const t of terms)for(const w of tokens){const d=lev(w,t);const thr=t.length>=5?2:1;if(d<=thr&&d<bestD){bestD=d;best=it;}}
   }
@@ -764,7 +784,7 @@ function matchItem(chunk){
   const etqM=chunk.match(/\b(p|m|g|lata|600|350|310|2l)\b/);
   if(etqM){
     const etq=etqM[1];
-    let cand=R().cardapio.filter(it=>etqsOf(it).some(s=>s.toLowerCase()===etq));
+    let cand=cardapioAtivo().filter(it=>etqsOf(it).some(s=>s.toLowerCase()===etq));
     if(/marmit/.test(chunk))cand=cand.filter(it=>(it.tipo||'marmita')==='marmita');
     else if(/bebida|refri|coca|pepsi|guaran/.test(chunk))cand=cand.filter(it=>it.tipo==='bebida');
     if(cand.length===1)return cand[0]; // só casa se a etiqueta identificar UM produto (sem ambiguidade)
@@ -774,7 +794,7 @@ function matchItem(chunk){
 // como matchItem, mas devolve TODOS os produtos plausíveis — mais de um = incerteza (pergunta ao cliente)
 function matchCandidatos(chunk){
   const hits=[];
-  for(const it of R().cardapio){
+  for(const it of cardapioAtivo()){
     let ok=(it.nome&&chunk.includes(it.nome.toLowerCase()));
     if(!ok)for(const k of kwsOf(it)){const re=k.length<=2?new RegExp('\\b'+escRe(k)+'\\b'):new RegExp('\\b'+escRe(k));if(re.test(chunk)){ok=true;break;}}
     if(ok)hits.push(it);
@@ -783,7 +803,7 @@ function matchCandidatos(chunk){
   const freq=termosDistintivos();
   const tokens=chunk.split(/\s+/).filter(w=>w.length>=4);
   let best=[],bestD=99;
-  for(const it of R().cardapio){
+  for(const it of cardapioAtivo()){
     const terms=termosDe(it).filter(t=>freq[t]===1);
     let d0=99;
     for(const t of terms)for(const w of tokens){const d=lev(w,t);const thr=t.length>=5?2:1;if(d<=thr&&d<d0)d0=d;}
@@ -793,7 +813,7 @@ function matchCandidatos(chunk){
   const etqM=chunk.match(ETQ_RE);
   if(etqM){
     const etq=etqM[1];
-    let cand=R().cardapio.filter(it=>etqsOf(it).some(s=>s.toLowerCase()===etq));
+    let cand=cardapioAtivo().filter(it=>etqsOf(it).some(s=>s.toLowerCase()===etq));
     if(/marmit/.test(chunk))cand=cand.filter(it=>(it.tipo||'marmita')==='marmita');
     else if(/bebida|refri|coca|pepsi|guaran/.test(chunk))cand=cand.filter(it=>it.tipo==='bebida');
     cand.via='etiqueta'; // cliente NÃO nomeou o produto — só deduzimos pelo tamanho
@@ -839,7 +859,7 @@ function parseOrder(text){
       if(own)etiqueta=own;
       else{
         // mesmo produto cadastrado em outra linha com o tamanho pedido?
-        const alt=R().cardapio.find(x=>x.nome===it.nome&&etqsOf(x).some(s=>s.toLowerCase()===pedida));
+        const alt=cardapioAtivo().find(x=>x.nome===it.nome&&etqsOf(x).some(s=>s.toLowerCase()===pedida));
         if(alt){it=alt;sizes=etqsOf(alt);etiqueta=sizes.find(s=>s.toLowerCase()===pedida);}
         else{out.indisponiveis.push({nome:it.nome,etq:pedida.length===1?pedida.toUpperCase():pedida,item:it});continue;} // não existe → avisa, NÃO anota
       }
@@ -916,14 +936,15 @@ const menuTxt=()=>{
   const linha=i=>{const s=etqsOf(i);
     if(s.length>1)return `• *${i.nome}*\n   ${tamanhosPrecos(i)}`; // tamanhos em linha própria
     return s.length?`• ${i.nome} — ${tamanhosPrecos(i)}`:`• ${i.nome} — R$ ${brl(i.preco)}`;};
-  const marmitas=R().cardapio.filter(i=>(i.tipo||'marmita')==='marmita');
-  const bebidas=R().cardapio.filter(i=>i.tipo==='bebida');
+  const marmitas=cardapioAtivo().filter(i=>(i.tipo||'marmita')==='marmita');
+  const bebidas=cardapioAtivo().filter(i=>i.tipo==='bebida');
+  if(!marmitas.length&&!bebidas.length)return 'Hoje ainda não temos itens no cardápio 😕\nSe precisar, digite *3* para falar com um atendente.';
   let t='Cardápio de hoje 🍽️';
   if(marmitas.length)t+='\n\n*Marmitas* 🍱\n'+marmitas.map(linha).join('\n');
   if(bebidas.length)t+='\n\n*Bebidas* 🥤\n'+bebidas.map(linha).join('\n');
   return t+'\n\nÉ só me dizer o que quer.';
 };
-const menuShort=()=>R().cardapio.map(i=>i.nome).join(', ');
+const menuShort=()=>cardapioAtivo().map(i=>i.nome).join(', ');
 function greet(c){c.step='menu';botSay(c,`Olá! 👋 Sou o robô da *${R().nome}*.\nÉ só me dizer seu pedido ou escolher:\n\n*1* — Ver cardápio\n*2* — Fazer pedido\n*3* — Falar com atendente`,500);}
 const opcoes=()=>'*1* — Ver cardápio\n*2* — Fazer pedido\n*3* — Falar com atendente';
 function confirmItems(c,items){c.step='mais';botSay(c,'Anotado! ✅\n'+describe(items)+'\n\nDeseja adicionar mais alguma coisa? (sim / não)',650);}
@@ -942,10 +963,10 @@ function aplicarPagamento(c,pg){
 /* ---------- venda consultiva / contexto ---------- */
 const BEBIDA_RE=/refri|refrigerante|coca|pepsi|guaran|suco|bebida|lata|água|agua/;
 const isBebida=it=>BEBIDA_RE.test(((it.nome||'')+' '+(it.palavras||'')).toLowerCase());
-const bebidasDisp=()=>R().cardapio.filter(isBebida).map(i=>i.nome);
+const bebidasDisp=()=>cardapioAtivo().filter(isBebida).map(i=>i.nome);
 function findProduct(text,c){
   const v=text.toLowerCase();
-  if(/\b(ela|ele|isso|essa|esse|dela|dele|desse|dessa|disso|a mesma|o mesmo|mesma|mesmo)\b/.test(v)&&c.lastProduct){return R().cardapio.find(i=>i.id===c.lastProduct.id)||c.lastProduct;}
+  if(/\b(ela|ele|isso|essa|esse|dela|dele|desse|dessa|disso|a mesma|o mesmo|mesma|mesmo)\b/.test(v)&&c.lastProduct){return cardapioAtivo().find(i=>i.id===c.lastProduct.id)||c.lastProduct;}
   return matchItem(v);
 }
 function handoff(c){botSay(c,'Sem problema! 🙋 Já estou chamando um atendente humano pra te ajudar. Um instante…',500);alertarAtendente(c,'atendente');}
@@ -1146,9 +1167,9 @@ function interpretar(text,estado,c){
   if(itens.semTamanho.length)return{intent:'SEM_TAMANHO',pendentes:itens.semTamanho};
   if(itens.confirmar.length)return{intent:'CONFIRMAR_ITEM',pendentes:itens.confirmar};
   // pedido genérico de bebida ("uma bebida", "um suco") → lista as opções em vez de chutar
-  if(/\b(bebida|refrigerante|suco)s?\b/.test(v)){const bs=R().cardapio.filter(isBebida);if(bs.length)return{intent:'AMBIGUO',ambiguos:[{termo:'bebida',opcoes:bs}]};}
+  if(/\b(bebida|refrigerante|suco)s?\b/.test(v)){const bs=cardapioAtivo().filter(isBebida);if(bs.length)return{intent:'AMBIGUO',ambiguos:[{termo:'bebida',opcoes:bs}]};}
   // pedido genérico de comida ("uma marmita", "quero comida") → lista as marmitas
-  if(/\b(marmitas?|marmitex|comida|almo[çc]o|janta(r)?|prato)\b/.test(v)){const ms=R().cardapio.filter(i=>(i.tipo||'marmita')==='marmita');if(ms.length)return{intent:'AMBIGUO',ambiguos:[{termo:'marmita',opcoes:ms}]};}
+  if(/\b(marmitas?|marmitex|comida|almo[çc]o|janta(r)?|prato)\b/.test(v)){const ms=cardapioAtivo().filter(i=>(i.tipo||'marmita')==='marmita');if(ms.length)return{intent:'AMBIGUO',ambiguos:[{termo:'marmita',opcoes:ms}]};}
 
   if(/^[👍👌🙏✅🤝]+\s*$/.test(text.trim()))return{intent:'SIM'}; // emoji de confirmação
   if(/^(sim|s|isso|aham|claro|com certeza|pode ser|bora|ok|blz|beleza|positivo|quero|mais|pode|manda|adiciona)\b/.test(v))return{intent:'SIM'};
@@ -1280,7 +1301,7 @@ const ConversationEngine=(()=>{
   const StateManager={estados:STATES, atual:c=>c.step||STATES.MENU, ir(c,novo){c.step=novo;return novo;}};
 
   // CardapioService — única fonte do cardápio
-  const CardapioService={itens:()=>R().cardapio, achar:(txt,c)=>findProduct(txt,c), interpretarItens:txt=>parseOrder(txt), texto:()=>menuTxt(), resumo:()=>menuShort()};
+  const CardapioService={itens:()=>cardapioAtivo(), achar:(txt,c)=>findProduct(txt,c), interpretarItens:txt=>parseOrder(txt), texto:()=>menuTxt(), resumo:()=>menuShort()};
 
   // OrderManager — o pedido único e seus cálculos
   const OrderManager={
@@ -1455,8 +1476,8 @@ $('#cfgHorario').addEventListener('input',e=>{draft.horario=e.target.value;markD
 $('#cfgTempo').addEventListener('input',e=>{draft.tempoEntrega=e.target.value;markDirty();});
 $('#cfgTaxa').addEventListener('input',e=>{draft.taxaEntrega=parseFloat(e.target.value)||0;markDirty();});
 $('#cfgGratis').onclick=()=>{draft.entregaGratis=!draft.entregaGratis;$('#cfgGratis').classList.toggle('on',draft.entregaGratis);$('#cfgTaxa').disabled=draft.entregaGratis;$('#cfgTaxa').value=draft.entregaGratis?0:draft.taxaEntrega;markDirty();};
-$('#addMarmitaBtn').onclick=()=>{draft.cardapio.push({id:++_seq,nome:'',preco:0,tipo:'marmita',etiqueta:'',palavras:''});renderMenu();markDirty();};
-$('#addBebidaBtn').onclick=()=>{draft.cardapio.push({id:++_seq,nome:'',preco:0,tipo:'bebida',etiqueta:'lata',palavras:''});renderMenu();markDirty();};
+$('#addMarmitaBtn').onclick=()=>{draft.cardapio.push({id:++_seq,nome:'',preco:0,tipo:'marmita',etiqueta:'',palavras:'',precos:{},dias:menuDiaSel<0?[0,1,2,3,4,5,6]:[menuDiaSel]});renderMenu();markDirty();};
+$('#addBebidaBtn').onclick=()=>{draft.cardapio.push({id:++_seq,nome:'',preco:0,tipo:'bebida',etiqueta:'lata',palavras:'',precos:{},dias:menuDiaSel<0?[0,1,2,3,4,5,6]:[menuDiaSel]});renderMenu();markDirty();};
 $('#addPecBtn').onclick=()=>{draft.peculiaridades.push('');renderPecs();markDirty();};
 function rowHtml(it,tipo){
   const opts=etqOptions(tipo);const ss=etqsOf(it);
@@ -1474,6 +1495,7 @@ function rowHtml(it,tipo){
     </div>
     <div class="mi-sizes">${solo}${opts.map(tile).join('')}</div>
     <div class="mi-kw-row"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg><input class="mi-kw" data-f="palavras" value="${esc(it.palavras)}" placeholder="${tipo==='bebida'?'como o cliente escreve — ex.: coca, refri':'como o cliente escreve — ex.: frango, grelhado'}" /></div>
+    <div class="mi-dias"><span class="mid-label">Dias:</span>${DIAS_LABEL.map((lb,d)=>`<button type="button" class="mid-chip${diasDe(it).includes(d)?' on':''}" data-dia="${d}" title="Servir ${lb}">${lb}</button>`).join('')}</div>
   </div>`;
 }
 function bindRows(box){
@@ -1491,14 +1513,35 @@ function bindRows(box){
       if(!it.precos)it.precos={};if(set.includes(e)&&it.precos[e]==null)it.precos[e]=+it.preco||0;
       renderMenu();markDirty();
     }));
+    // chips de dia da semana: liga/desliga a disponibilidade; nunca deixa o item sem nenhum dia
+    row.querySelectorAll('.mid-chip').forEach(ch=>ch.onclick=()=>{
+      const it=draft.cardapio.find(x=>x.id===id);if(!it)return;
+      if(!Array.isArray(it.dias)||!it.dias.length)it.dias=[0,1,2,3,4,5,6];
+      const d=+ch.dataset.dia,i=it.dias.indexOf(d);
+      if(i>=0){if(it.dias.length>1)it.dias.splice(i,1);}else it.dias.push(d);
+      it.dias.sort((a,b)=>a-b);ch.classList.toggle('on',it.dias.includes(d));markDirty();
+    });
     row.querySelector('.icon-del').onclick=()=>{draft.cardapio=draft.cardapio.filter(x=>x.id!==id);renderMenu();markDirty();};
   });
 }
 const updateMenuCount=()=>$('#menuCount').textContent=draft.cardapio.length+' itens';
+// -1 = "Todos os dias"; 0..6 = dia específico (foco de edição)
+let menuDiaSel=-1;
+function diaVisivel(it){return menuDiaSel<0||diasDe(it).includes(menuDiaSel);}
+function renderDiaSel(){
+  const box=$('#menuDiaSel');if(!box)return;const hoje=diaHoje();
+  const chip=(d,lb)=>`<button type="button" class="dia-chip${menuDiaSel===d?' on':''}${d===hoje?' hoje':''}" data-dsel="${d}">${lb}</button>`;
+  box.innerHTML=chip(-1,'Todos')+DIAS_LABEL.map((lb,d)=>chip(d,lb)).join('');
+  box.querySelectorAll('[data-dsel]').forEach(b=>b.onclick=()=>{menuDiaSel=+b.dataset.dsel;renderMenu();});
+}
 function renderMenu(){
+  renderDiaSel();
   const m=$('#menuRowsMarmita'),b=$('#menuRowsBebida');
-  m.innerHTML=draft.cardapio.filter(i=>(i.tipo||'marmita')==='marmita').map(it=>rowHtml(it,'marmita')).join('');
-  b.innerHTML=draft.cardapio.filter(i=>i.tipo==='bebida').map(it=>rowHtml(it,'bebida')).join('');
+  const marm=draft.cardapio.filter(i=>(i.tipo||'marmita')==='marmita'&&diaVisivel(i));
+  const beb=draft.cardapio.filter(i=>i.tipo==='bebida'&&diaVisivel(i));
+  const vazio=lb=>`<div class="menu-vazio">Nenhuma ${lb} ${menuDiaSel<0?'cadastrada':'para '+DIAS_LABEL[menuDiaSel]} ainda.</div>`;
+  m.innerHTML=marm.length?marm.map(it=>rowHtml(it,'marmita')).join(''):vazio('marmita');
+  b.innerHTML=beb.length?beb.map(it=>rowHtml(it,'bebida')).join(''):vazio('bebida');
   bindRows(m);bindRows(b);updateMenuCount();
 }
 function renderPecs(){
@@ -1521,7 +1564,9 @@ $('#teachInput').addEventListener('keydown',e=>{if(e.key==='Enter'){ensinar(e.ta
 $('#saveBtn').onclick=()=>{
   draft.cardapio=draft.cardapio.filter(i=>(i.nome||'').trim());
   // normaliza preços por tamanho: mantém só os tamanhos ativos e usa o 1º como preço-base
-  draft.cardapio.forEach(i=>{const ss=etqsOf(i);if(!i.precos)i.precos={};Object.keys(i.precos).forEach(k=>{if(!ss.includes(k))delete i.precos[k];});ss.forEach(k=>{if(i.precos[k]==null)i.precos[k]=+i.preco||0;});if(ss.length)i.preco=+i.precos[ss[0]]||0;});
+  draft.cardapio.forEach(i=>{const ss=etqsOf(i);if(!i.precos)i.precos={};Object.keys(i.precos).forEach(k=>{if(!ss.includes(k))delete i.precos[k];});ss.forEach(k=>{if(i.precos[k]==null)i.precos[k]=+i.preco||0;});if(ss.length)i.preco=+i.precos[ss[0]]||0;
+    // dias: só valores 0–6 válidos; item sem dias = todos os dias
+    i.dias=(Array.isArray(i.dias)?i.dias:[]).map(Number).filter(d=>d>=0&&d<=6).sort((a,b)=>a-b);if(!i.dias.length)i.dias=[0,1,2,3,4,5,6];});
   draft.peculiaridades=draft.peculiaridades.filter(p=>(p||'').trim());
   if(draft.entregaGratis)draft.taxaEntrega=0;
   DB.restaurant=JSON.parse(JSON.stringify(draft));saveDB();

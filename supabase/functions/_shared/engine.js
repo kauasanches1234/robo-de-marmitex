@@ -63,6 +63,7 @@ const opcoes = () => '*1* — Ver cardápio\n*2* — Fazer pedido\n*3* — Falar
 function menuTxt(cardapio) {
   const linha = i => { const s = etqsOf(i); if (s.length > 1) return `• *${i.nome}*\n   ${s.map(k => `${k} R$ ${brl(precoDe(i, k))}`).join(' · ')}`; return s.length ? `• ${i.nome} — ${s[0]} R$ ${brl(precoDe(i, s[0]))}` : `• ${i.nome} — R$ ${brl(precoDe(i))}`; };
   const marm = cardapio.filter(i => !isBebida(i)), beb = cardapio.filter(isBebida);
+  if (!marm.length && !beb.length) return 'Hoje ainda não temos itens no cardápio 😕\nSe precisar, digite *3* para falar com um atendente.';
   let t = 'Cardápio de hoje 🍽️';
   if (marm.length) t += '\n\n*Marmitas* 🍱\n' + marm.map(linha).join('\n');
   if (beb.length) t += '\n\n*Bebidas* 🥤\n' + beb.map(linha).join('\n');
@@ -85,7 +86,7 @@ export function responder(texto, estado, ctx) {
   if (!e.step) e.step = 'menu';
   const out = [];
   const say = t => { out.push(t); };
-  const v = norm(texto);
+  const v = norm(texto).slice(0, 1000); // defesa: limita entrada absurda (WhatsApp já limita a 4096)
   const done = () => ({ respostas: out.slice(0, 5), estado: e }); // trava anti-loop (A10)
 
   if (!v) { say('Não recebi sua mensagem 🙂 Pode repetir?'); return done(); }
