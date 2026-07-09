@@ -392,13 +392,34 @@ Formato de cada entrada: **Categoria · Problema · Causa · Solução · Estrat
   ainda não exercitado em runtime Deno).
 - **Atualizado**: 2026-07-08. **Histórico**: v1 assinatura + limites + edge cases.
 
+### A24 — Robô responde disponibilidade por dia ("tem X hoje?", "que dia tem X?")
+- **Categoria**: linguagem natural / cardápio por dia
+- **Problema**: cliente pergunta "tem carne hoje?", "rola feijoada?", "que dia
+  tem feijoada?" — o robô precisa responder sobre disponibilidade, usando o
+  cardápio COMPLETO (com item.dias), não só o do dia.
+- **Solução**: engine recebe `cardapio` completo + `hoje` (fuso do chamador) e
+  filtra internamente. Intents: QUE_DIA → `nomesDias(diasDe(it))` ("quarta e
+  sábado" / "todos os dias" / "de segunda a sexta"); DISPONIVEL → se é do dia,
+  oferece anotar (pendingAdd/pend confirmar → pergunta tamanho se múltiplo);
+  senão informa os dias. Regex de disponibilidade exclui verbos de pedido
+  (quero/manda/põe) para não confundir "quero carne" (pedido) com "tem carne?".
+- **Estratégia**: perguntas sobre disponibilidade usam o cardápio completo;
+  pedidos usam o do dia. Front e engine implementam a MESMA regra (dívida:
+  unificar num cérebro só — o front ainda tem parser próprio).
+- **Exemplo real**: exemplos do dono "tem carne hoje?/rola feijoada?/que dia
+  tem feijoada?" (2026-07-09); dono pediu para o Claude treinar o robô como
+  cliente humano → viraram tests/engine-dias.test.js e tests/bateria7.js.
+- **Frequência**: uso contínuo. **Confiança**: alta (41 casos de dia).
+- **Atualizado**: 2026-07-09. **Histórico**: v1 disponibilidade + que-dia.
+
 ---
 
 ## Processo de testes (inegociável)
 
 1. Suba o servidor local: `npx live-server . --port=3457 --no-browser`.
 2. Rode **todas** (front): `node tests/bateria.js && node tests/bateria2.js &&
-   node tests/bateria3.js && node tests/bateria4.js && node tests/bateria5.js && node tests/bateria6.js`.
+   node tests/bateria3.js && node tests/bateria4.js && node tests/bateria5.js && node tests/bateria6.js && node tests/bateria7.js`.
+   Motor (Node, sem servidor): `node tests/engine.test.js && node tests/engine-dias.test.js`.
    E o cérebro do backend (não precisa de servidor): `node tests/engine.test.js`.
 3. Qualquer falha: corrigir → registrar/evoluir aprendizado aqui → rodar TUDO
    de novo. Só publicar (push na `main` → deploy automático) com 100% verde.

@@ -70,6 +70,16 @@ function menuTxt(cardapio) {
   return t + '\n\nÉ só me dizer o que quer 😊';
 }
 const descreve = cart => cart.map(i => `• ${i.qtd}× ${i.nome}${i.etiqueta ? ' (' + i.etiqueta + ')' : ''}${i.note ? ' — ' + i.note : ''} — R$ ${brl(i.preco * i.qtd)}`).join('\n');
+const diasDe = it => (Array.isArray(it && it.dias) && it.dias.length) ? it.dias : [0, 1, 2, 3, 4, 5, 6];
+const DIAS_NOME = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'];
+// "segunda, quarta e sábado" | "todos os dias" | "de segunda a sexta"
+function nomesDias(arr) {
+  const d = [...new Set(arr)].filter(x => x >= 0 && x <= 6).sort((a, b) => a - b);
+  if (d.length >= 7) return 'todos os dias';
+  if (d.length === 5 && d.join() === '1,2,3,4,5') return 'de segunda a sexta';
+  const ns = d.map(x => DIAS_NOME[x]);
+  return ns.length > 1 ? ns.slice(0, -1).join(', ') + ' e ' + ns[ns.length - 1] : (ns[0] || '—');
+}
 const totalCart = cart => cart.reduce((s, i) => s + i.preco * i.qtd, 0);
 
 // junta linhas por nome+etiqueta+obs (Skill A06)
@@ -80,16 +90,36 @@ function addItem(cart, ni) { const s = cart.find(i => i.nome === ni.nome && (i.e
  * @returns {{respostas:string[], estado:object}}
  */
 export function responder(texto, estado, ctx) {
-  const cardapio = (ctx && ctx.cardapio) || [];
+  // cardapioAll = cardápio completo (com item.dias); `hoje` no fuso do chamador.
+  // `cardapio` (do dia) é o que o cliente pode pedir agora; perguntas de
+  // disponibilidade ("que dia tem X?") usam o completo. Ver A22/A24.
+  const cardapioAll = (ctx && ctx.cardapio) || [];
   const cfg = (ctx && ctx.config) || {};
+  const hoje = (ctx && ctx.hoje != null) ? ctx.hoje : new Date().getDay();
+  const cardapio = cardapioAll.filter(i => diasDe(i).includes(hoje));
   let e = estado ? JSON.parse(JSON.stringify(estado)) : estadoInicial();
   if (!e.step) e.step = 'menu';
   const out = [];
   const say = t => { out.push(t); };
   const v = norm(texto).slice(0, 1000); // defesa: limita entrada absurda (WhatsApp já limita a 4096)
   const done = () => ({ respostas: out.slice(0, 5), estado: e }); // trava anti-loop (A10)
+  const umItem = txt => { const cs = candidatos(txt, cardapioAll); return cs.length === 1 ? cs[0] : null; };
 
   if (!v) { say('Não recebi sua mensagem 🙂 Pode repetir?'); return done(); }
+
+  // "que dia(s) tem X?" / "quando tem X?" — informa os dias em que o item é servido
+  if (/\b(que dia|que dias|quando|qual dia|quais dias)\b/.test(v)) {
+    const it = umItem(texto);
+    if (it) { say(`*${it.nome}* a gente serve ${nomesDias(diasDe(it))} 🗓️${diasDe(it).includes(hoje) ? '\nHoje tem! Quer pedir? 😊' : ''}`); return done(); }
+  }
+  // "tem carne hoje?" / "rola feijoada?" / "vocês têm X?" — disponibilidade
+  if (/\b(tem|te[mn]|rola|voce?s? te[mn]|vcs? te[mn]|dispon[ií]vel|hoje tem)\b/.test(v) && !/\b(quero|vou querer|manda|me v[eê]|adiciona|p[oõ]e)\b/.test(v)) {
+    const it = umItem(texto);
+    if (it) {
+      if (diasDe(it).includes(hoje)) { if (e.step === 'menu') e.step = 'pedido'; say(`Temos sim! *${it.nome}* está no cardápio de hoje 😋\nQuer que eu anote? (sim / não)`); e.pend = { tipo: 'confirmar', item: it, qtd: 1 }; return done(); }
+      say(`Hoje não tem *${it.nome}* 😕\nA gente serve ${nomesDias(diasDe(it))}. Posso te sugerir algo do cardápio de hoje?`); return done();
+    }
+  }
 
   // universais (valem em qualquer passo)
   if (/\batendente\b|\bhumano\b|falar com (alguem|atendente|gente)/.test(v)) { e.humano = true; say('Sem problema! 🙋 Já estou chamando um atendente humano. Um instante…'); return done(); }
@@ -159,7 +189,11 @@ export function responder(texto, estado, ctx) {
     const p = e.pend; const sizes = etqsOf(p.item);
     const pedida = (v.match(/\b(p|m|g|lata|600|2l)\b/) || [])[1] || (/(pequen)/.test(v) ? 'p' : /(grand)/.test(v) ? 'g' : /(m[eé]di)/.test(v) ? 'm' : null);
     if (p.tipo === 'tamanho' && pedida) { const own = sizes.find(s => s.toLowerCase() === pedida); if (own) { addItem(e.cart, { nome: p.item.nome, preco: precoDe(p.item, own), etiqueta: own, qtd: p.qtd || 1, note: null }); e.pend = null; return confirma(e, cardapio, say, done, ctx); } }
-    if (p.tipo === 'confirmar' && /^(sim|s|isso|claro|pode|quero|ok|blz|👍|👌|✅)/.test(v)) { const et = sizes[0] || ''; addItem(e.cart, { nome: p.item.nome, preco: precoDe(p.item, et), etiqueta: et, qtd: p.qtd || 1, note: null }); e.pend = null; return confirma(e, cardapio, say, done, ctx); }
+    if (p.tipo === 'confirmar' && /^(sim|s|isso|claro|pode|quero|ok|blz|👍|👌|✅)/.test(v)) {
+      // vários tamanhos → pergunta qual (não anota o 1º por conta própria, A02)
+      if (sizes.length > 1) { e.pend = { tipo: 'tamanho', item: p.item, qtd: p.qtd || 1 }; say(`*${p.item.nome}* tem os tamanhos ${sizes.map(s => `${s} R$ ${brl(precoDe(p.item, s))}`).join(' · ')} — qual você quer? 😊`); return done(); }
+      addItem(e.cart, { nome: p.item.nome, preco: precoDe(p.item, sizes[0] || ''), etiqueta: sizes[0] || '', qtd: p.qtd || 1, note: null }); e.pend = null; return confirma(e, cardapio, say, done, ctx);
+    }
     if (/^(n[aã]o|nao)/.test(v)) { e.pend = null; say('Tudo bem! 🙂 Deseja mais alguma coisa ou finalizar?'); return done(); }
     e.pend = null; // não respondeu — segue
   }

@@ -713,6 +713,11 @@ const diasDe=it=>(Array.isArray(it&&it.dias)&&it.dias.length)?it.dias:[0,1,2,3,4
 const diaHoje=()=>new Date().getDay();
 // cardápio ativo HOJE — usado em TODO o atendimento (config usa draft.cardapio completo)
 const cardapioAtivo=()=>DB.restaurant.cardapio.filter(i=>diasDe(i).includes(diaHoje()));
+const DIAS_NOME=['domingo','segunda','terça','quarta','quinta','sexta','sábado'];
+// "segunda, quarta e sábado" | "todos os dias" | "de segunda a sexta"
+function nomesDias(arr){const d=[...new Set(arr)].filter(x=>x>=0&&x<=6).sort((a,b)=>a-b);if(d.length>=7)return'todos os dias';if(d.length===5&&d.join()==='1,2,3,4,5')return'de segunda a sexta';const ns=d.map(x=>DIAS_NOME[x]);return ns.length>1?ns.slice(0,-1).join(', ')+' e '+ns[ns.length-1]:(ns[0]||'—');}
+// busca 1 item no cardápio COMPLETO (perguntas de disponibilidade "tem X?", "que dia tem X?")
+function itemCompleto(texto){const c=(texto||'').toLowerCase();const hits=DB.restaurant.cardapio.filter(it=>{if(it.nome&&c.includes(it.nome.toLowerCase()))return true;return kwsOf(it).some(k=>new RegExp('\\b'+escRe(k)).test(c));});return hits.length===1?hits[0]:null;}
 // preço por tamanho (it.precos={P:16,M:18,...}); sem preço específico, vale it.preco
 const precoDe=(it,etq)=>{const p=it&&it.precos&&etq?it.precos[etq]:null;return (p!=null&&p!=='')?+p:(+((it&&it.preco))||0);};
 // "P R$ 16,00 · M R$ 18,00" — tamanhos com seus preços (para cardápio e perguntas)
@@ -1073,6 +1078,12 @@ function armarConfirmacao(c,p){
   c.pendingAdd=p.item;c.pendingAddPref={etiqueta:own||null,qtd:p.qtd||1,note:p.note||null};c.lastProduct=p.item;
   return `Você quis dizer *${p.item.nome}* ${own?'{{etq:'+own+'}} (R$ '+brl(precoDe(p.item,own))+')':chipsDe(p.item)}? (sim / não)`;
 }
+// "tem X hoje?" — se é do dia, oferece anotar; senão informa os dias em que tem
+function responderDisponivel(c,it){
+  if(c.step==='menu')c.step='pedido';
+  if(diasDe(it).includes(diaHoje())){c.pendingAdd=it;c.lastProduct=it;botSay(c,`Temos sim! *${it.nome}* está no cardápio de hoje 😋\nQuer que eu anote? (sim / não)`,500);}
+  else botSay(c,`Hoje não tem *${it.nome}* 😕\nA gente serve ${nomesDias(diasDe(it))}. Posso te sugerir algo do cardápio de hoje?`,500);
+}
 function responderConfirmarItem(c,pendentes){
   if(c.step==='menu')c.step='pedido';
   botSay(c,armarConfirmacao(c,pendentes[0]),600);
@@ -1126,6 +1137,9 @@ function interpretar(text,estado,c){
   if(/fazer (um )?pedido|quero pedir|come[çc]ar (o )?pedido/.test(v))return{intent:'FAZER_PEDIDO'};
   if(/(o que eu (pedi|j[áa] pedi)|meu pedido|qual.*(o )?total|quanto.*(deu|dando|fica|ficou|ta dando|t[áa] dando)|mostra.*pedido|ver (meu )?pedido|^resumo)/.test(v))return{intent:'CONSULTAR'};
   if(/(meu|o)\s+endere[çc]o|qual.*endere[çc]o|onde.*(vou|vai)?\s*entreg|endere[çc]o.*(certo|correto|anotad)/.test(v))return{intent:'CONSULTAR_ENDERECO'};
+  // disponibilidade por dia: "que dia tem X?" e "tem carne hoje?" / "rola feijoada?"
+  if(/\b(que dia|que dias|quando|qual dia|quais dias)\b/.test(v)){const it=itemCompleto(text);if(it)return{intent:'QUE_DIA',item:it};}
+  if(/\b(tem|te[mn]|rola|voce?s? te[mn]|vcs? te[mn]|dispon[ií]vel|hoje tem)\b/.test(v)&&!/\b(quero|vou querer|manda|me v[eê]|adiciona|p[oõ]e)\b/.test(v)){const it=itemCompleto(text);if(it)return{intent:'DISPONIVEL',item:it};}
   if(/\bentreg(a|am|ar|as|ou)?\b|\bdelivery\b|taxa de entrega|voc[eê]s? entregam|vcs entregam/.test(v))return{intent:'ENTREGA'};
 
   // correções (EDITAM o pedido, nunca duplicam)
@@ -1209,6 +1223,8 @@ function processarIntent(c,r,text){
     case 'ATENDENTE':return handoff(c);
     case 'CONSULTAR':return showCart(c);
     case 'CONSULTAR_ENDERECO':return botSay(c,c.endereco?`Seu endereço de entrega é:\n📍 *${c.endereco}*\nEstá correto? Se precisar, é só me mandar o endereço certo 😊`:'Ainda não tenho seu endereço 🙂 Quando chegar essa etapa, é só me mandar: *rua, número e bairro*.',500);
+    case 'QUE_DIA':return botSay(c,`*${r.item.nome}* a gente serve ${nomesDias(diasDe(r.item))} 🗓️${diasDe(r.item).includes(diaHoje())?'\nHoje tem! Quer pedir? 😊':''}`,500);
+    case 'DISPONIVEL':return responderDisponivel(c,r.item);
     case 'ENTREGA':return responderEntrega(c);
     case 'VER_CARDAPIO':if(c.step==='menu')c.step='pedido';return botSay(c,menuTxt(),550);
     case 'FAZER_PEDIDO':c.step='pedido';return botSay(c,'Pode mandar! 📝 Ex.: "2 marmitas e uma Coca". O que vai querer?',500);

@@ -51,7 +51,6 @@ function diaSemanaBR(tz = 'America/Sao_Paulo'): number {
   const wd = new Intl.DateTimeFormat('en-US', { weekday: 'short', timeZone: tz }).format(new Date());
   return { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 }[wd] ?? new Date().getDay();
 }
-const itemServidoHoje = (dias: number[] | null, dow: number) => !dias || dias.length === 0 || dias.includes(dow);
 
 async function enviarTexto(phoneNumberId: string, to: string, body: string) {
   const r = await fetch(`${GRAPH}/${phoneNumberId}/messages`, {
@@ -107,10 +106,9 @@ Deno.serve(async (req) => {
           // cardápio + config
           const { data: itens } = await db.from('menu_items')
             .select('*').eq('restaurant_id', rest.id).eq('ativo', true).order('ordem');
-          const dow = diaSemanaBR();  // cardápio do dia, no fuso do Brasil
-          const cardapio = (itens ?? [])
-            .filter((i: any) => itemServidoHoje(i.dias, dow))
-            .map((i: any) => ({ nome: i.nome, tipo: i.tipo, etiqueta: i.etiqueta, precos: i.precos, preco: i.preco, palavras: i.palavras }));
+          // cardápio COMPLETO (com dias); o engine filtra o dia usando `hoje`.
+          // dia no fuso do Brasil — nunca getDay() do servidor (UTC).
+          const cardapio = (itens ?? []).map((i: any) => ({ nome: i.nome, tipo: i.tipo, etiqueta: i.etiqueta, precos: i.precos, preco: i.preco, palavras: i.palavras, dias: i.dias }));
           const config = { nome: rest.nome, horario: rest.horario, pixKey: rest.pix_key, tempoEntrega: rest.tempo_entrega, taxaEntrega: rest.taxa_entrega, entregaGratis: rest.entrega_gratis };
 
           // conversa (estado) + cliente
@@ -130,7 +128,7 @@ Deno.serve(async (req) => {
 
           // roda o robô
           const estado = (conv.estado && Object.keys(conv.estado).length) ? conv.estado : estadoInicial();
-          const r = responder(texto, estado, { cardapio, config });
+          const r = responder(texto, estado, { cardapio, config, hoje: diaSemanaBR() });
 
           // persiste estado + envia respostas
           await db.from('conversations').update({ estado: r.estado, humano: !!r.estado.humano, last_at: new Date().toISOString() }).eq('id', conv.id);
