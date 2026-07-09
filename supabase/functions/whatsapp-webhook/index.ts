@@ -12,6 +12,7 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { responder, estadoInicial } from '../_shared/engine.js';
+import { rowToItem, rowToConfig } from '../_shared/mappers.js';
 
 const VERIFY_TOKEN = Deno.env.get('WHATSAPP_VERIFY_TOKEN') ?? '';
 const WA_TOKEN = Deno.env.get('WHATSAPP_TOKEN') ?? '';
@@ -108,8 +109,9 @@ Deno.serve(async (req) => {
             .select('*').eq('restaurant_id', rest.id).eq('ativo', true).order('ordem');
           // cardápio COMPLETO (com dias); o engine filtra o dia usando `hoje`.
           // dia no fuso do Brasil — nunca getDay() do servidor (UTC).
-          const cardapio = (itens ?? []).map((i: any) => ({ nome: i.nome, tipo: i.tipo, etiqueta: i.etiqueta, precos: i.precos, preco: i.preco, palavras: i.palavras, dias: i.dias }));
-          const config = { nome: rest.nome, horario: rest.horario, pixKey: rest.pix_key, tempoEntrega: rest.tempo_entrega, taxaEntrega: rest.taxa_entrega, entregaGratis: rest.entrega_gratis };
+          // mapeamento ÚNICO (mappers.js) — mesma tradução que o painel usa.
+          const cardapio = (itens ?? []).map(rowToItem);
+          const config = rowToConfig(rest);
 
           // conversa (estado) + cliente
           const { data: conv } = await db.from('conversations')

@@ -444,8 +444,10 @@ Formato de cada entrada: **Categoria · Problema · Causa · Solução · Estrat
    node tests/bateria6.js && node tests/bateria7.js && node tests/bateria8.js`.
    Motor (Node, sem servidor): `node tests/engine.test.js &&
    node tests/engine-dias.test.js && node tests/engine-variedades.test.js`.
-   Integração front↔back (Node, sem banco): `node tests/mappers.test.js`.
-   Total atual: 127 front + 51 motor + 25 integração = 203 verdes.
+   Integração front↔back (Node, sem banco): `node tests/mappers.test.js &&
+   node tests/webhook-flow.test.js` (o webhook-flow exercita linha do banco →
+   mappers.js → engine.js → resposta, o caminho REAL do webhook).
+   Total atual: 127 front + 51 motor + 40 integração = 218 verdes.
 3. Qualquer falha: corrigir → registrar/evoluir aprendizado aqui → rodar TUDO
    de novo. Só publicar (push na `main` → deploy automático) com 100% verde.
 4. Cenário novo de cliente (print/vídeo do dono) → vira teste ANTES da correção.

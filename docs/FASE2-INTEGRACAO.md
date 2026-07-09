@@ -11,9 +11,11 @@ o que já funciona. Documento vivo — atualizar a cada slice entregue.
 - **Back (`supabase/`)**: schema multi-tenant com RLS
   (`migrations/20260708_init.sql`), webhook do WhatsApp e `engine.js` (cérebro
   único). Pronto, mas **o painel ainda não fala com ele**.
-- **Camada nova (este slice)**: `js/mappers.js` — tradução pura front↔linhas do
-  banco, coberta por `tests/mappers.test.js` (25 casos). É a fronteira única de
-  conversão (DRY): ninguém remonta campos à mão.
+- **Camada nova (este slice)**: `supabase/functions/_shared/mappers.js` —
+  tradução pura front↔linhas do banco, ao lado do `engine.js` (mesmo "cérebro
+  compartilhado"). Coberta por `tests/mappers.test.js` (25 casos) e usada de
+  verdade pelo webhook (`tests/webhook-flow.test.js`, 15 casos). É a fronteira
+  única de conversão (DRY): nem o painel nem o webhook remontam campos à mão.
 
 ## 2. Mapa tabelas ↔ telas
 
@@ -47,6 +49,8 @@ onde o mapeador guarda esse bloco de UI.
 Rollout em fatias pequenas, cada uma verde na suíte antes da próxima:
 
 1. **[feito]** Mapeadores puros + testes + coluna `config_extra`.
+1b. **[feito]** Webhook passa a usar o mapeador único (fim da duplicação
+   back), validado ponta-a-ponta por `tests/webhook-flow.test.js`.
 2. Cliente Supabase (`js/supa-client.js`) com bootstrap por `config.js` e
    fallback offline. Sem tocar nos `saveDB()`.
 3. **Seam de persistência**: um repositório (`repo`) que embrulha hoje o

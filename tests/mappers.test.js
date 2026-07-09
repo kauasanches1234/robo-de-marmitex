@@ -1,7 +1,7 @@
 /* Camada de integração front↔back — mapeadores puros (js/mappers.js).
    Garante que a tradução painel ↔ Supabase é fiel nos dois sentidos (ida-e-volta)
    e resistente a dados ausentes/sujos vindos do banco. Roda no Node, sem banco. */
-const M = require('../js/mappers.js');
+import * as M from '../supabase/functions/_shared/mappers.js';
 
 let pass = 0, fail = 0;
 const check = (nome, cond) => { console.log((cond ? 'PASS' : 'FAIL') + ' | ' + nome); cond ? pass++ : fail++; };
