@@ -318,6 +318,12 @@
   .st-price input::-webkit-outer-spin-button,.st-price input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
   .st-price input[type=number]{-moz-appearance:textfield;appearance:textfield;}
   .st-solo{font-size:11px;font-weight:700;color:var(--muted);}
+  /* variedades personalizadas (Família, Kids…) + botão de adicionar */
+  .size-tile.custom{border-color:var(--brand);box-shadow:0 1px 6px rgba(234,88,12,.12);}
+  .st-cust{cursor:pointer;font-size:10.5px;font-weight:800;padding:3px 8px;border-radius:999px;background:var(--brand-soft);color:var(--brand);display:inline-flex;align-items:center;gap:4px;}
+  .st-cust:hover{filter:brightness(.96);}
+  .add-var{min-height:36px;padding:5px 12px;border:1px dashed var(--line);border-radius:11px;background:transparent;color:var(--muted);font-size:12px;font-weight:700;transition:border-color .15s,color .15s;}
+  .add-var:hover{border-color:var(--brand);color:var(--brand);}
   .mi-kw-row{display:flex;align-items:center;gap:7px;border-top:1px dashed var(--line);padding-top:9px;color:var(--faint);}
   .mi-kw{flex:1;border:none;outline:none;background:transparent;font-size:12.5px;color:var(--muted);min-width:0;}
   .mi-kw::placeholder{color:var(--faint);}
@@ -1195,9 +1201,12 @@ function interpretar(text,estado,c){
 function processarIntent(c,r,text){
   // aguardando o TAMANHO de um produto com várias etiquetas (pendingSize)
   if(c.pendingSize){
-    const ps=c.pendingSize;const sizes=etqsOf(ps.item);
-    const pedida=tamanhoPedido(text.toLowerCase());
-    const own=pedida&&sizes.find(s=>s.toLowerCase()===pedida);
+    const ps=c.pendingSize;const sizes=etqsOf(ps.item);const tv=text.toLowerCase();
+    const pedida=tamanhoPedido(tv);
+    // casa por sigla (P/M/G…) OU pelo nome da variedade personalizada (ex.: "família").
+    // deb() tira acentos dos dois lados: "familia" digitado casa "Família".
+    const deb=s=>s.normalize('NFD').replace(/[̀-ͯ]/g,'');const tvd=deb(tv);
+    const own=(pedida&&sizes.find(s=>deb(s.toLowerCase())===pedida))||sizes.find(s=>new RegExp('\\b'+escRe(deb(s.toLowerCase()))+'\\b').test(tvd));
     if(own){
       c.pendingSize=null;
       const item={id:ps.item.id,nome:ps.item.nome,preco:precoDe(ps.item,own),etiqueta:own,qtd:ps.qtd||1,note:ps.note||null};
@@ -1504,12 +1513,16 @@ function rowHtml(it,tipo){
       ${on?`<div class="st-price"><span>R$</span><input data-ps="${e}" type="number" min="0" step="0.5" value="${precoDe(it,e)}" /></div>`:''}
     </div>`;};
   const solo=ss.length?'':`<div class="size-tile on solo"><span class="st-solo">Preço único</span><div class="st-price"><span>R$</span><input data-f="preco" type="number" min="0" step="0.5" value="${it.preco}" /></div></div>`;
+  // variedades personalizadas: etiquetas do item que não são tamanhos fixos
+  const custom=ss.filter(e=>!opts.includes(e));
+  const tileCustom=e=>`<div class="size-tile on custom" data-tile="${esc(e)}"><button type="button" class="st-cust" data-etq="${esc(e)}" title="Remover a variedade ${esc(e)}">${esc(e)} ✕</button><div class="st-price"><span>R$</span><input data-ps="${esc(e)}" type="number" min="0" step="0.5" value="${precoDe(it,e)}" /></div></div>`;
+  const addVar=`<button type="button" class="add-var" title="Criar uma variedade (ex.: Família, Kids)">+ variedade</button>`;
   return `<div class="menu-item" data-id="${it.id}">
     <div class="mi-top">
       <input class="mi-nome" data-f="nome" value="${esc(it.nome)}" placeholder="${tipo==='bebida'?'Nome da bebida':'Nome do prato'}" />
       <button class="icon-del" title="Remover"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg></button>
     </div>
-    <div class="mi-sizes">${solo}${opts.map(tile).join('')}</div>
+    <div class="mi-sizes">${solo}${opts.map(tile).join('')}${custom.map(tileCustom).join('')}${addVar}</div>
     <div class="mi-kw-row"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg><input class="mi-kw" data-f="palavras" value="${esc(it.palavras)}" placeholder="${tipo==='bebida'?'como o cliente escreve — ex.: coca, refri':'como o cliente escreve — ex.: frango, grelhado'}" /></div>
     <div class="mi-dias"><span class="mid-label">Dias:</span>${DIAS_LABEL.map((lb,d)=>`<button type="button" class="mid-chip${diasDe(it).includes(d)?' on':''}" data-dia="${d}" title="Servir ${lb}">${lb}</button>`).join('')}</div>
   </div>`;
@@ -1520,15 +1533,26 @@ function bindRows(box){
     row.querySelectorAll('input[data-f]').forEach(inp=>inp.addEventListener('input',()=>{const it=draft.cardapio.find(x=>x.id===id);if(!it)return;const f=inp.dataset.f;it[f]=f==='preco'?(parseFloat(inp.value)||0):inp.value;markDirty();updateMenuCount();}));
     row.querySelectorAll('input[data-ps]').forEach(inp=>inp.addEventListener('input',()=>{const it=draft.cardapio.find(x=>x.id===id);if(!it)return;if(!it.precos)it.precos={};it.precos[inp.dataset.ps]=parseFloat(inp.value)||0;const ss=etqsOf(it);if(ss.length)it.preco=+it.precos[ss[0]]||0;markDirty();}));
     // tiles: toque ativa o tamanho; com ele ativo, toque na SIGLA desativa (o preço fica dentro do tile)
+    // recompõe a etiqueta preservando os tamanhos fixos na ordem + variedades no fim
+    const recompoe=(it,set)=>{const fx=etqOptions(it.tipo);it.etiqueta=[...fx.filter(x=>set.includes(x)),...set.filter(x=>!fx.includes(x))].join('+');};
     row.querySelectorAll('.size-tile[data-tile]').forEach(tl=>tl.addEventListener('click',ev=>{
       const it=draft.cardapio.find(x=>x.id===id);if(!it)return;
-      const e=tl.dataset.tile;const set=etqsOf(it);const on=set.includes(e);
-      if(on&&!ev.target.closest('.st-tag'))return; // clique no preço não desliga
-      if(on)set.splice(set.indexOf(e),1);else set.push(e);
-      it.etiqueta=etqOptions(it.tipo).filter(x=>set.includes(x)).join('+'); // mantém a ordem P<M<G / lata<600<2L
-      if(!it.precos)it.precos={};if(set.includes(e)&&it.precos[e]==null)it.precos[e]=+it.preco||0;
-      renderMenu();markDirty();
+      const e=tl.dataset.tile,fx=etqOptions(it.tipo),set=etqsOf(it),on=set.includes(e),tag=ev.target.closest('.st-tag,.st-cust');
+      if(fx.includes(e)){ // tamanho fixo: liga/desliga (clique no preço não desliga)
+        if(on&&!tag)return;
+        if(on)set.splice(set.indexOf(e),1);else{set.push(e);if(!it.precos)it.precos={};if(it.precos[e]==null)it.precos[e]=+it.preco||0;}
+      }else{ // variedade personalizada: o ✕ remove; clique no preço não
+        if(!tag)return;set.splice(set.indexOf(e),1);if(it.precos)delete it.precos[e];
+      }
+      recompoe(it,set);renderMenu();markDirty();
     }));
+    const av=row.querySelector('.add-var');if(av)av.onclick=()=>{
+      const it=draft.cardapio.find(x=>x.id===id);if(!it)return;
+      const nome=((window.prompt('Nome da variedade (ex.: Família, Kids):','')||'').trim().replace(/\+/g,'').replace(/\s+/g,' ').slice(0,14));
+      if(!nome)return;const fx=etqOptions(it.tipo),set=etqsOf(it);
+      if([...fx,...set].some(x=>x.toLowerCase()===nome.toLowerCase())){toast('Essa variedade já existe 🙂');return;}
+      set.push(nome);if(!it.precos)it.precos={};it.precos[nome]=+it.preco||0;recompoe(it,set);renderMenu();markDirty();
+    };
     // chips de dia da semana: liga/desliga a disponibilidade; nunca deixa o item sem nenhum dia
     row.querySelectorAll('.mid-chip').forEach(ch=>ch.onclick=()=>{
       const it=draft.cardapio.find(x=>x.id===id);if(!it)return;

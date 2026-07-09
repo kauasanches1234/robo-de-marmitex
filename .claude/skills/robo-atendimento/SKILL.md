@@ -412,15 +412,39 @@ Formato de cada entrada: **Categoria · Problema · Causa · Solução · Estrat
 - **Frequência**: uso contínuo. **Confiança**: alta (41 casos de dia).
 - **Atualizado**: 2026-07-09. **Histórico**: v1 disponibilidade + que-dia.
 
+### A25 — Variedades personalizadas (Família, Kids…) além de P/M/G/lata
+- **Categoria**: cardápio / tamanhos / linguagem natural
+- **Problema**: o dono desenhou um "+" depois dos tiles P/M/G e pediu para
+  criar tamanhos/variedades próprios (ex.: "Família", "Kids"), cada um com seu
+  preço, tanto em marmitas quanto em bebidas.
+- **Solução**: a variedade é só mais uma etiqueta — vira parte de `it.etiqueta`
+  ("P+M+Família") com preço em `it.precos['Família']`. Nada de estrutura nova:
+  o mecanismo de tamanhos já existente lista, pergunta e anota. Na config, tile
+  `.size-tile.custom` com input de preço e ✕ para remover; botão "+ variedade"
+  abre prompt. Validações: sem "+", ≤14 chars, sem duplicata (toast).
+- **Armadilha (corrigida)**: o matcher do pendingSize casava a variedade por
+  regex do nome, mas a entrada do cliente passa por `norm()` (tira acento) e o
+  nome da etiqueta NÃO. "familia" digitado nunca casava "Família". **Fix**:
+  normalizar/deburrar OS DOIS lados antes de comparar (engine usa `norm(s)`; o
+  front ganhou um `deb()` inline). Sem isso o teste com acento passa e o mundo
+  real (sem acento) quebra silenciosamente.
+- **Exemplo real**: print do dono com "+" desenhado (2026-07-09).
+- **Testes**: tests/bateria8.js (front) + tests/engine-variedades.test.js
+  (motor, inclui o caso "familia" sem acento).
+- **Frequência**: sob demanda por restaurante. **Confiança**: alta (19 casos).
+- **Atualizado**: 2026-07-09. **Histórico**: v1 variedades + fix de acento.
+
 ---
 
 ## Processo de testes (inegociável)
 
 1. Suba o servidor local: `npx live-server . --port=3457 --no-browser`.
 2. Rode **todas** (front): `node tests/bateria.js && node tests/bateria2.js &&
-   node tests/bateria3.js && node tests/bateria4.js && node tests/bateria5.js && node tests/bateria6.js && node tests/bateria7.js`.
-   Motor (Node, sem servidor): `node tests/engine.test.js && node tests/engine-dias.test.js`.
-   E o cérebro do backend (não precisa de servidor): `node tests/engine.test.js`.
+   node tests/bateria3.js && node tests/bateria4.js && node tests/bateria5.js &&
+   node tests/bateria6.js && node tests/bateria7.js && node tests/bateria8.js`.
+   Motor (Node, sem servidor): `node tests/engine.test.js &&
+   node tests/engine-dias.test.js && node tests/engine-variedades.test.js`.
+   Total atual: 127 front + 51 motor = 178 verdes.
 3. Qualquer falha: corrigir → registrar/evoluir aprendizado aqui → rodar TUDO
    de novo. Só publicar (push na `main` → deploy automático) com 100% verde.
 4. Cenário novo de cliente (print/vídeo do dono) → vira teste ANTES da correção.

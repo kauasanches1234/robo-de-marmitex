@@ -188,7 +188,8 @@ export function responder(texto, estado, ctx) {
   if (e.pend) {
     const p = e.pend; const sizes = etqsOf(p.item);
     const pedida = (v.match(/\b(p|m|g|lata|600|2l)\b/) || [])[1] || (/(pequen)/.test(v) ? 'p' : /(grand)/.test(v) ? 'g' : /(m[eé]di)/.test(v) ? 'm' : null);
-    if (p.tipo === 'tamanho' && pedida) { const own = sizes.find(s => s.toLowerCase() === pedida); if (own) { addItem(e.cart, { nome: p.item.nome, preco: precoDe(p.item, own), etiqueta: own, qtd: p.qtd || 1, note: null }); e.pend = null; return confirma(e, cardapio, say, done, ctx); } }
+    // casa por sigla OU pelo nome da variedade personalizada (ex.: "família")
+    if (p.tipo === 'tamanho') { const own = (pedida && sizes.find(s => norm(s) === pedida)) || sizes.find(s => new RegExp('\\b' + norm(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b').test(v)); if (own) { addItem(e.cart, { nome: p.item.nome, preco: precoDe(p.item, own), etiqueta: own, qtd: p.qtd || 1, note: null }); e.pend = null; return confirma(e, cardapio, say, done, ctx); } }
     if (p.tipo === 'confirmar' && /^(sim|s|isso|claro|pode|quero|ok|blz|👍|👌|✅)/.test(v)) {
       // vários tamanhos → pergunta qual (não anota o 1º por conta própria, A02)
       if (sizes.length > 1) { e.pend = { tipo: 'tamanho', item: p.item, qtd: p.qtd || 1 }; say(`*${p.item.nome}* tem os tamanhos ${sizes.map(s => `${s} R$ ${brl(precoDe(p.item, s))}`).join(' · ')} — qual você quer? 😊`); return done(); }
