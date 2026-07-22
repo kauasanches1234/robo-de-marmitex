@@ -67,8 +67,9 @@ check('trigger touch_updated_at mexe no updated_at', new Date(cli2.updated_at) >
 check('RLS ligada em todas as tabelas', (await db.query(`select bool_and(relrowsecurity) b from pg_class where relname in ('restaurants','menu_items','customers','conversations','messages','orders')`)).rows[0].b === true);
 
 await comoUsuario(db, u1, async () => {
-  const rs = (await db.query('select id, nome from restaurants')).rows;
-  check('u1 vê só o próprio restaurante', rs.length === 1 && rs[0].nome === 'R1');
+  const rs = (await db.query('select nome from restaurants')).rows;
+  // u1 pode ter o "Meu Restaurante" (auto do trigger) + o R1; nunca o R2 do outro.
+  check('u1 vê o próprio R1 e NÃO vê o R2 (isolamento)', rs.some(r => r.nome === 'R1') && !rs.some(r => r.nome === 'R2'));
   const mi = (await db.query('select count(*)::int n from menu_items')).rows[0].n;
   check('u1 vê só o cardápio do próprio restaurante', mi === (await db.query('select count(*)::int n from menu_items where restaurant_id=$1', [r1.id])).rows[0].n);
 });
@@ -76,7 +77,15 @@ await deveFalhar('u1 NÃO consegue inserir item no restaurante do u2 (with check
   comoUsuario(db, u1, () => db.query('insert into menu_items (restaurant_id, nome) values ($1,$2)', [r2.id, 'Invasor'])));
 await comoUsuario(db, u2, async () => {
   const rs = (await db.query('select nome from restaurants')).rows;
-  check('u2 vê só o próprio (R2)', rs.length === 1 && rs[0].nome === 'R2');
+  check('u2 vê o próprio R2 e NÃO vê o R1 (isolamento)', rs.some(r => r.nome === 'R2') && !rs.some(r => r.nome === 'R1'));
+});
+
+// ── onboarding: novo usuário ganha 1 restaurante automaticamente ──
+const u3 = (await db.query('insert into auth.users default values returning id')).rows[0].id;
+const rs3 = (await db.query('select id, nome from restaurants where owner_id=$1', [u3])).rows;
+check('novo usuário cria 1 restaurante automaticamente (trigger)', rs3.length === 1 && rs3[0].nome === 'Meu Restaurante');
+await comoUsuario(db, u3, async () => {
+  check('e o dono novo enxerga esse restaurante pela RLS', (await db.query('select count(*)::int n from restaurants')).rows[0].n === 1);
 });
 
 console.log(`\nRESULTADO: ${pass} pass, ${fail} fail`);
