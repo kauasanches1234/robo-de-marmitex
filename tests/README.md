@@ -1,23 +1,36 @@
-# Baterias de teste do Robô de Marmitex
+# Testes do Robô de Marmitex
 
-Testes de ponta a ponta com Playwright (Chromium) dirigindo o painel real.
+Dois grupos: **backend/banco** (Node puro, sem servidor nem navegador) e
+**front** (Playwright/Chromium dirigindo o painel real).
 
 ## Como rodar
 
 ```bash
-# 1. dependência (uma vez)
-npm i playwright-core
+# uma vez por ambiente: liga o Playwright pré-instalado e instala o pglite
+npm run setup
 
-# 2. servidor local
-npx live-server . --port=3457 --no-browser
+# backend + banco (rápido, não precisa de servidor):
+npm test              # = npm run test:back
 
-# 3. todas as baterias (a partir da raiz do projeto)
-node tests/bateria.js && node tests/bateria2.js && node tests/bateria3.js && node tests/bateria4.js
+# front (precisa do servidor de pé):
+npm run serve         # em outro terminal (live-server na porta 3457)
+npm run test:front
 ```
 
 Se o Chromium não estiver no caminho padrão, aponte com `CHROMIUM=/caminho/chrome`.
 
-## O que cada bateria cobre
+## Backend / banco (`npm run test:back`)
+
+| Arquivo | Cobertura |
+|---|---|
+| `engine.test.js` | Cérebro do robô (parser, intenções, fluxo) — o mesmo `engine.js` do webhook |
+| `engine-dias.test.js` | Disponibilidade por dia da semana ("tem carne hoje?", "que dia tem feijoada?") |
+| `engine-variedades.test.js` | Variedades personalizadas (Família, Kids…) com preço próprio |
+| `mappers.test.js` | Tradução pura front↔Supabase (ida-e-volta, defaults, linhas nulas) |
+| `webhook-flow.test.js` | Caminho REAL do webhook: linha do banco → mappers → engine → resposta |
+| `schema.test.js` | Migrações num Postgres real (pglite): estrutura, constraints, cascata, triggers e **RLS** (isolamento entre restaurantes) |
+
+## Front (`npm run test:front`)
 
 | Arquivo | Cobertura |
 |---|---|
@@ -25,6 +38,7 @@ Se o Chromium não estiver no caminho padrão, aponte com `CHROMIUM=/caminho/chr
 | `bateria2.js` | Parser: confirmação por etiqueta ("marmita g"), cardápio em seções, atalhos 1/2/3, etiquetas múltiplas, endereço restrito à região |
 | `bateria3.js` | Trava anti-loop, expiração de conversa (60s), preço por tamanho (config → chat → carrinho → total) |
 | `bateria4.js` | Linguagem real: gírias, agradecimento, horário, cancelamento total, cliente irritado, fora de contexto, fallback variado, injeção de HTML, mensagens em partes, pedidos múltiplos, conversa longa |
+| `bateria5.js`–`bateria8.js` | Bebidas, mapa/zonas de entrega, cardápio por dia, variedades no atendimento |
 
 ## Regras (ver `.claude/skills/robo-atendimento/SKILL.md`)
 

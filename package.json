@@ -1,0 +1,16 @@
+{
+  "name": "robo-de-marmitex",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Robô de marmitex para WhatsApp (SaaS). Painel estático + cérebro único (engine.js) + backend Supabase.",
+  "scripts": {
+    "setup": "npm install --no-save --no-package-lock @electric-sql/pglite && node tests/link-playwright.mjs",
+    "test": "npm run test:back",
+    "test:back": "node tests/engine.test.js && node tests/engine-dias.test.js && node tests/engine-variedades.test.js && node tests/mappers.test.js && node tests/webhook-flow.test.js && node tests/schema.test.js",
+    "test:front": "node tests/bateria.js && node tests/bateria2.js && node tests/bateria3.js && node tests/bateria4.js && node tests/bateria5.js && node tests/bateria6.js && node tests/bateria7.js && node tests/bateria8.js",
+    "serve": "npx live-server . --port=3457 --no-browser"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.5.4"
+  }
+}

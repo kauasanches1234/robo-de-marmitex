@@ -95,25 +95,33 @@ alter table orders        enable row level security;
 
 -- o dono (autenticado) só acessa o que é do próprio restaurante.
 -- a service_role (webhook/back) ignora RLS automaticamente.
+-- drop-if-exists antes de create: a migração pode rodar de novo sem erro
+-- (Postgres não tem `create policy if not exists`).
+drop policy if exists own_restaurant on restaurants;
 create policy own_restaurant on restaurants
   for all using (owner_id = auth.uid()) with check (owner_id = auth.uid());
 
+drop policy if exists own_menu on menu_items;
 create policy own_menu on menu_items for all
   using (restaurant_id in (select id from restaurants where owner_id = auth.uid()))
   with check (restaurant_id in (select id from restaurants where owner_id = auth.uid()));
 
+drop policy if exists own_customers on customers;
 create policy own_customers on customers for all
   using (restaurant_id in (select id from restaurants where owner_id = auth.uid()))
   with check (restaurant_id in (select id from restaurants where owner_id = auth.uid()));
 
+drop policy if exists own_orders on orders;
 create policy own_orders on orders for all
   using (restaurant_id in (select id from restaurants where owner_id = auth.uid()))
   with check (restaurant_id in (select id from restaurants where owner_id = auth.uid()));
 
+drop policy if exists own_conversations on conversations;
 create policy own_conversations on conversations for all
   using (restaurant_id in (select id from restaurants where owner_id = auth.uid()))
   with check (restaurant_id in (select id from restaurants where owner_id = auth.uid()));
 
+drop policy if exists own_messages on messages;
 create policy own_messages on messages for all
   using (conversation_id in (
     select c.id from conversations c

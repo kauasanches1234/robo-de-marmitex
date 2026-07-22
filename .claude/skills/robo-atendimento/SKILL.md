@@ -434,20 +434,45 @@ Formato de cada entrada: **Categoria · Problema · Causa · Solução · Estrat
 - **Frequência**: sob demanda por restaurante. **Confiança**: alta (19 casos).
 - **Atualizado**: 2026-07-09. **Histórico**: v1 variedades + fix de acento.
 
+### A26 — Banco testado de verdade (pglite) + RLS é a segurança real
+- **Categoria**: backend / banco / segurança
+- **Problema**: o schema (RLS multi-tenant, constraints) não tinha teste — só
+  "parecia certo". Sem Postgres local (docker bloqueado no proxy), migração de
+  SQL passava sem validação.
+- **Solução**: `tests/schema.test.js` sobe um Postgres real embutido
+  (`@electric-sql/pglite`, WASM, em memória) e aplica as MIGRAÇÕES REAIS. Um
+  stub mínimo de `auth` (schema + `auth.users` + `auth.uid()` lendo um setting
+  de teste + role `authenticated`) permite testar a RLS como em produção:
+  `set role authenticated` + `set_config('test.uid', …)` e conferir que um dono
+  só enxerga o próprio restaurante e é barrado ao inserir no alheio (with check).
+- **Armadilhas**: (1) pglite não traz `pgcrypto` como extensão — carregar via
+  `@electric-sql/pglite/contrib/pgcrypto` (o `create extension` da migração roda
+  faithful); `gen_random_uuid()` já é core. (2) RLS só vale para role
+  não-superusuário — testar como `authenticated`, não como o superusuário do
+  pglite. (3) `create policy` NÃO tem `if not exists` → migração não era
+  idempotente; padrão é `drop policy if exists` antes de `create` (o teste de
+  2ª passada pegou isso).
+- **Integridade adicional** (migração `20260710`): CHECK em tipo/status/quem,
+  não-negativos em taxa/gasto/total, trigger de `updated_at` em customers.
+- **Ferramenta**: `npm test` roda backend+banco sem servidor; `npm run setup`
+  prepara o ambiente (Playwright + pglite).
+- **Frequência**: toda mudança de schema. **Confiança**: alta (22 casos).
+- **Atualizado**: 2026-07-09. **Histórico**: v1 schema + RLS + integridade.
+
 ---
 
 ## Processo de testes (inegociável)
 
-1. Suba o servidor local: `npx live-server . --port=3457 --no-browser`.
-2. Rode **todas** (front): `node tests/bateria.js && node tests/bateria2.js &&
-   node tests/bateria3.js && node tests/bateria4.js && node tests/bateria5.js &&
-   node tests/bateria6.js && node tests/bateria7.js && node tests/bateria8.js`.
-   Motor (Node, sem servidor): `node tests/engine.test.js &&
-   node tests/engine-dias.test.js && node tests/engine-variedades.test.js`.
-   Integração front↔back (Node, sem banco): `node tests/mappers.test.js &&
-   node tests/webhook-flow.test.js` (o webhook-flow exercita linha do banco →
-   mappers.js → engine.js → resposta, o caminho REAL do webhook).
-   Total atual: 127 front + 51 motor + 40 integração = 218 verdes.
+0. Uma vez por ambiente: `npm run setup` (liga o Playwright pré-instalado +
+   instala o pglite). `node_modules` é symlink/efêmero — não versionar.
+1. **Backend + banco** (rápido, sem servidor): `npm test` (= `npm run
+   test:back`). Cobre engine (o cérebro), dias, variedades, mappers,
+   webhook-flow (linha do banco → mappers → engine → resposta) e **schema**
+   (migrações num Postgres real via pglite: constraints, cascata, triggers,
+   RLS). 113 casos.
+2. **Front** (precisa do servidor): `npm run serve` noutro terminal, depois
+   `npm run test:front` (baterias 1–8, Playwright). 127 casos.
+   Total atual: 127 front + 51 motor + 40 integração + 22 banco = 240 verdes.
 3. Qualquer falha: corrigir → registrar/evoluir aprendizado aqui → rodar TUDO
    de novo. Só publicar (push na `main` → deploy automático) com 100% verde.
 4. Cenário novo de cliente (print/vídeo do dono) → vira teste ANTES da correção.
