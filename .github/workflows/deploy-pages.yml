@@ -27,6 +27,20 @@ jobs:
         uses: actions/configure-pages@v5
         with:
           enablement: true
+      # Gera config.js a partir dos Secrets do repositório (Settings → Secrets →
+      # Actions). Só config PÚBLICA do front: URL + publishable key (a RLS é quem
+      # protege). NUNCA colocar aqui a service_role nem o token do WhatsApp —
+      # esses são segredos de servidor (supabase secrets), jamais no site público.
+      - name: Gerar config.js (Supabase)
+        run: |
+          cat > config.js <<'EOF'
+          window.MARMITEX_CONFIG = {
+            supabaseUrl: "__URL__",
+            supabaseAnonKey: "__KEY__"
+          };
+          EOF
+          sed -i "s|__URL__|${{ secrets.SUPABASE_URL }}|" config.js
+          sed -i "s|__KEY__|${{ secrets.SUPABASE_ANON_KEY }}|" config.js
       - name: Empacotar site estático
         uses: actions/upload-pages-artifact@v3
         with:
