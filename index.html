@@ -1458,7 +1458,7 @@ function renderOrder(){
   const c=cur();if(!c)return;
   $('#convAv').innerHTML=avatarHtml(c);$('#convName').textContent=c.nome;$('#convPhone').textContent=c.phone;
   $('#stepBadge').textContent=({menu:'Conversando',pedido:'Escolhendo itens',mais:'Adicionando itens',revisao:'Revisando pedido',endereco:'Coletando endereço',pagamento:'Forma de pagamento',comprovante:'Aguardando comprovante',concluido:'Pedido fechado'})[c.step]||'—';
-  $('#orderList').innerHTML=c.cart.length?c.cart.map(i=>`<div class="order-row"><span class="q">${i.qtd}×</span><div class="nm">${esc(i.nome)}${i.etiqueta?`<span class="etq etq-${i.etiqueta}">${i.etiqueta}</span>`:''}${i.note?`<span class="note">obs: ${esc(i.note)}</span>`:''}</div><span class="pr">R$ ${brl(i.preco*i.qtd)}</span></div>`).join(''):'<div class="order-empty">Nenhum item ainda.</div>';
+  $('#orderList').innerHTML=c.cart.length?c.cart.map(i=>`<div class="order-row"><span class="q">${i.qtd}×</span><div class="nm">${esc(i.nome)}${i.etiqueta?`<span class="etq etq-${esc(i.etiqueta)}">${esc(i.etiqueta)}</span>`:''}${i.note?`<span class="note">obs: ${esc(i.note)}</span>`:''}</div><span class="pr">R$ ${brl(i.preco*i.qtd)}</span></div>`).join(''):'<div class="order-empty">Nenhum item ainda.</div>';
   const pend=entregaPendente(c);const tx=taxa(c);const tot=orderTotal(c)+((c.cart.length&&!pend)?tx:0);
   $('#orderTotal').textContent=pend?brl(orderTotal(c))+' + entrega':brl(tot);
   const a=$('#addrLine');a.querySelector('span').textContent='Endereço: '+(c.endereco||'aguardando');a.classList.toggle('pending',!c.endereco);
@@ -1548,7 +1548,8 @@ function bindRows(box){
     }));
     const av=row.querySelector('.add-var');if(av)av.onclick=()=>{
       const it=draft.cardapio.find(x=>x.id===id);if(!it)return;
-      const nome=((window.prompt('Nome da variedade (ex.: Família, Kids):','')||'').trim().replace(/\+/g,'').replace(/\s+/g,' ').slice(0,14));
+      // sanitiza: sem '+', sem metacaracteres de HTML (<>&"'`\/), espaços colapsados, máx 14
+      const nome=((window.prompt('Nome da variedade (ex.: Família, Kids):','')||'').trim().replace(/[+<>&"'`\\/]/g,'').replace(/\s+/g,' ').slice(0,14));
       if(!nome)return;const fx=etqOptions(it.tipo),set=etqsOf(it);
       if([...fx,...set].some(x=>x.toLowerCase()===nome.toLowerCase())){toast('Essa variedade já existe 🙂');return;}
       set.push(nome);if(!it.precos)it.precos={};it.precos[nome]=+it.preco||0;recompoe(it,set);renderMenu();markDirty();
@@ -1899,13 +1900,17 @@ function resolverZona(c){
 let _leafletLoading=false;
 function ensureLeaflet(cb){
   if(typeof L!=='undefined'){cb();return;}
+  // SRI (integrity) + crossorigin: se o CDN for adulterado, o navegador recusa
+  // o arquivo em vez de executar JS/CSS injetado. Hashes oficiais do Leaflet 1.9.4.
   if(!document.getElementById('leafletCss')){
     const css=document.createElement('link');css.id='leafletCss';css.rel='stylesheet';
+    css.integrity='sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=';css.crossOrigin='';
     css.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';document.head.appendChild(css);
   }
   if(_leafletLoading){setTimeout(()=>ensureLeaflet(cb),200);return;}
   _leafletLoading=true;
   const s=document.createElement('script');
+  s.integrity='sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=';s.crossOrigin='';
   s.src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
   s.onload=()=>cb();
   s.onerror=()=>{_leafletLoading=false;const el=document.getElementById('mapaLeaflet');if(el)el.innerHTML='<div class="map-erro">Não foi possível carregar o mapa (sem internet?). Tente novamente.</div>';};

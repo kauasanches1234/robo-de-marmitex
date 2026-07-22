@@ -459,6 +459,25 @@ Formato de cada entrada: **Categoria · Problema · Causa · Solução · Estrat
 - **Frequência**: toda mudança de schema. **Confiança**: alta (22 casos).
 - **Atualizado**: 2026-07-09. **Histórico**: v1 schema + RLS + integridade.
 
+### A27 — Segurança: escapar SEMPRE dado do usuário no innerHTML
+- **Categoria**: segurança / front / XSS
+- **Problema**: a lista de pedidos (`#orderList`) interpolava `i.etiqueta` sem
+  `esc()`. Com variedades, a etiqueta virou entrada do dono → um nome tipo
+  `"><img onerror=...>` executava script no painel. A aba Pedidos já escapava —
+  inconsistência clássica que vira buraco.
+- **Solução (defesa em 2 camadas)**: (1) render sempre com `esc()`; (2) entrada
+  de variedade remove metacaracteres `+<>&"'\`\/`, colapsa espaço, máx 14. O
+  chat (`buildBubble`) é seguro porque faz `esc(text)` ANTES de trocar `{{etq}}`.
+- **Regra**: TODO `${...}` dentro de template que vira `innerHTML` e carrega
+  dado do usuário/banco passa por `esc()` — inclusive dentro de atributos.
+- **Outros achados da auditoria** (ver `_local/SEGURANCA.md`, privado): Leaflet
+  ganhou SRI; `criador.html` tem auth só client-side (mockup — trocar por
+  Supabase Auth antes de produção); token do WhatsApp deve sair do navegador na
+  fase Meta; histórico do git sem segredos; RLS testada.
+- **Teste**: `tests/bateria9-seguranca.js` (payload com onerror não executa).
+- **Frequência**: toda vez que montar HTML. **Confiança**: alta (5 casos).
+- **Atualizado**: 2026-07-09. **Histórico**: v1 XSS etiqueta + auditoria geral.
+
 ---
 
 ## Processo de testes (inegociável)
@@ -471,8 +490,9 @@ Formato de cada entrada: **Categoria · Problema · Causa · Solução · Estrat
    (migrações num Postgres real via pglite: constraints, cascata, triggers,
    RLS). 113 casos.
 2. **Front** (precisa do servidor): `npm run serve` noutro terminal, depois
-   `npm run test:front` (baterias 1–8, Playwright). 127 casos.
-   Total atual: 127 front + 51 motor + 40 integração + 22 banco = 240 verdes.
+   `npm run test:front` (baterias 1–9, Playwright; a 9 é de segurança/XSS).
+   132 casos.
+   Total atual: 132 front + 51 motor + 40 integração + 22 banco = 245 verdes.
 3. Qualquer falha: corrigir → registrar/evoluir aprendizado aqui → rodar TUDO
    de novo. Só publicar (push na `main` → deploy automático) com 100% verde.
 4. Cenário novo de cliente (print/vídeo do dono) → vira teste ANTES da correção.

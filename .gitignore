@@ -12,3 +12,6 @@ Thumbs.db
 
 # symlink local usado pelos testes
 tests/node_modules
+
+# guias de operação e relatórios de segurança — NÃO versionar (privados do dono)
+_local/

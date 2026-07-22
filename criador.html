@@ -132,7 +132,6 @@
       <div class="field"><label for="email">E-mail</label><input id="email" type="email" placeholder="voce@robo.com" /></div>
       <div class="field"><label for="senha">Senha</label><input id="senha" type="password" placeholder="••••••" /></div>
       <button class="btn-login" type="submit">Entrar</button>
-      <div class="login-hint">Demo — e-mail: <b>admin@robo.com</b> · senha: <b>1234</b></div>
     </form>
   </div>
 
@@ -182,6 +181,10 @@
    Persistência: localStorage 'criador_tenants_v1'
    O bloqueio reflete no robô (index.html lê o mesmo storage).
    ========================================================= */
+// ⚠️ SEGURANÇA — auth de MOCKUP (só client-side). NÃO protege nada de verdade:
+// qualquer um lê o código-fonte. Antes de produção, TROCAR por Supabase Auth
+// (login real + RLS no banco). Hoje o painel só mexe em localStorage local, sem
+// dados reais no servidor — por isso o risco atual é baixo. Ver SEGURANCA.md.
 const CRED={email:'admin@robo.com',senha:'1234'};
 const COLORS=['#4F46E5','#EA580C','#16A34A','#0EA5E9','#DB2777','#7C3AED','#0891B2','#CA8A04'];
 const TSTORE='criador_tenants_v1';
