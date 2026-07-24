@@ -36,7 +36,7 @@ check('menu_items.ativo default true', it1.ativo === true);
 await deveFalhar('tipo inválido é rejeitado', () => db.query("insert into menu_items (restaurant_id, nome, tipo) values ($1,'X','sobremesa')", [r1.id]));
 await deveFalhar('status de pedido inválido é rejeitado', () => db.query("insert into orders (restaurant_id, status) values ($1,'entregue_ontem')", [r1.id]));
 await deveFalhar('tipo inválido em event_logs é rejeitado', () => db.query("insert into event_logs (restaurant_id, tipo) values ($1,'fofoca')", [r1.id]));
-check('event_logs aceita tipo válido (pedido)', (await db.query("insert into event_logs (restaurant_id, tipo, descricao, valor) values ($1,'pedido','x',35) returning id", [r1.id])).rows.length === 1);
+check('event_logs aceita tipo válido (pedido)', (await db.query("insert into event_logs (restaurant_id, tipo, descricao) values ($1,'pedido','x') returning id", [r1.id])).rows.length === 1);
 await deveFalhar('taxa negativa é rejeitada', () => db.query('insert into restaurants (owner_id, nome, taxa_entrega) values ($1,$2,$3)', [u1, 'Neg', -1]));
 
 // ── unicidade ──
@@ -87,6 +87,16 @@ await comoUsuario(db, u1, async () => {
 await comoUsuario(db, u2, async () => {
   check('u2 NÃO vê os event_logs do u1', (await db.query("select count(*)::int n from event_logs where descricao='de u1'")).rows[0].n === 0);
 });
+
+// ── super-admin (dono do robô) enxerga TODOS os restaurantes pelo e-mail ──
+await comoUsuario(db, u2, async () => {
+  const n = (await db.query('select count(*)::int n from restaurants')).rows[0].n;
+  check('super-admin vê todos os restaurantes (R1 + R2 + autos)', n >= 2 && (await db.query('select count(*)::int n from restaurants where nome=$1', ['R1'])).rows[0].n === 1);
+}, 'kauapratt17@gmail.com');
+await comoUsuario(db, u2, async () => {
+  const nomes = (await db.query('select nome from restaurants')).rows.map(r => r.nome);
+  check('dono comum (outro e-mail) NÃO vira super-admin', !nomes.includes('R1'));
+}, 'outro@exemplo.com');
 
 // ── higiene: função apaga conversas antigas (estado é transitório) ──
 await db.query("insert into conversations (restaurant_id, wa_id, last_at) values ($1,$2, now() - interval '48 hours')", [r1.id, 'velho']);

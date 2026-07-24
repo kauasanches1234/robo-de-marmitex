@@ -19,9 +19,12 @@ const MIGR_DIR = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'supa
 const AUTH_STUB = `
 create schema if not exists auth;
 create table if not exists auth.users (id uuid primary key default gen_random_uuid());
--- auth.uid(): em produção lê o JWT; no teste lê um setting que a gente controla.
+-- auth.uid()/auth.jwt(): em produção vêm do JWT; no teste lêem settings nossos.
 create or replace function auth.uid() returns uuid language sql stable as $$
   select nullif(current_setting('test.uid', true), '')::uuid
+$$;
+create or replace function auth.jwt() returns jsonb language sql stable as $$
+  select jsonb_build_object('email', nullif(current_setting('test.email', true), ''))
 $$;
 -- role que o Supabase usa para o usuário logado (a RLS se aplica a ela).
 do $$ begin
@@ -36,8 +39,10 @@ export async function novoBanco() {
   const db = new PGlite({ extensions: { pgcrypto } }); // pgcrypto p/ o `create extension` da migração
   await db.exec(AUTH_STUB);
   for (const sql of migracoes()) await db.exec(sql);
-  // a role logada precisa de privilégio de tabela; a RLS é quem filtra as linhas.
+  // a role logada precisa de privilégio de tabela (a RLS é quem filtra as linhas)
+  // e de acesso ao schema auth (auth.uid()/auth.jwt()), como no Supabase real.
   await db.exec("grant usage on schema public to authenticated; grant all on all tables in schema public to authenticated;");
+  await db.exec("grant usage on schema auth to authenticated; grant execute on all functions in schema auth to authenticated;");
   return db;
 }
 
@@ -47,10 +52,12 @@ export function migracoes() {
     .map((f) => readFileSync(join(MIGR_DIR, f), 'utf8'));
 }
 
-/** Executa `fn` como o usuário `uid` (role authenticated + claim de teste). */
-export async function comoUsuario(db, uid, fn) {
+/** Executa `fn` como o usuário `uid` (role authenticated + claims de teste).
+ *  `email` opcional alimenta auth.jwt()->>'email' (para testar super-admin). */
+export async function comoUsuario(db, uid, fn, email = '') {
   await db.exec('set role authenticated');
-  await db.query('select set_config($1, $2, false)', ['test.uid', uid]);
+  await db.query('select set_config($1, $2, false)', ['test.uid', uid || '']);
+  await db.query('select set_config($1, $2, false)', ['test.email', email]);
   try { return await fn(); }
-  finally { await db.exec('reset role'); await db.query('select set_config($1, $2, false)', ['test.uid', '']); }
+  finally { await db.exec('reset role'); await db.query('select set_config($1, $2, false)', ['test.uid', '']); await db.query('select set_config($1, $2, false)', ['test.email', '']); }
 }

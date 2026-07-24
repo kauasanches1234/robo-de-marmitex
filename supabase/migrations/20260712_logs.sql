@@ -13,17 +13,20 @@ alter table conversations add column if not exists last_wam_id text;
 -- fim das transcrições
 drop table if exists messages cascade;
 
--- logs compactos de eventos do atendimento
+-- logs compactos de eventos do atendimento — SIMPLES de propósito:
+-- só o que aconteceu e quando. Sem faturamento nem jsonb (o pedido em si, com
+-- valor, fica na tabela orders).
 create table if not exists event_logs (
   id             uuid primary key default gen_random_uuid(),
   restaurant_id  uuid not null references restaurants(id) on delete cascade,
   tipo           text not null,                 -- 'pedido' | 'erro' | 'humano' | 'sistema'
   descricao      text,
-  valor          numeric(10,2),
-  meta           jsonb default '{}'::jsonb,
   created_at     timestamptz default now()
 );
 create index if not exists idx_eventlogs_restaurant on event_logs(restaurant_id, created_at desc);
+-- se uma versão anterior criou colunas extras, remove (mantém simples)
+alter table event_logs drop column if exists valor;
+alter table event_logs drop column if exists meta;
 
 alter table event_logs drop constraint if exists event_logs_tipo_chk;
 alter table event_logs add  constraint event_logs_tipo_chk check (tipo in ('pedido', 'erro', 'humano', 'sistema'));

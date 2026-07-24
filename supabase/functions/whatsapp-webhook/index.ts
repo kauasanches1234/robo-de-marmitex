@@ -148,7 +148,7 @@ Deno.serve(async (req) => {
             const total = (r.estado.cart ?? []).reduce((s: number, i: any) => s + i.preco * i.qtd, 0) + (config.entregaGratis ? 0 : (+config.taxaEntrega || 0));
             const { data: cli } = await db.from('customers').select('id,pedidos_count,gasto_total').eq('restaurant_id', rest.id).eq('wa_id', from).single();
             await db.from('orders').insert({ restaurant_id: rest.id, customer_id: cli?.id ?? null, itens: r.estado.cart, endereco: r.estado.endereco, pagamento: r.estado.pagamento, total, status: 'novo' });
-            await db.from('event_logs').insert({ restaurant_id: rest.id, tipo: 'pedido', descricao: `Pedido de ${from} — ${r.estado.pagamento}`, valor: total, meta: { itens: (r.estado.cart ?? []).length } });
+            await db.from('event_logs').insert({ restaurant_id: rest.id, tipo: 'pedido', descricao: `Pedido de ${from} — ${r.estado.pagamento}` });
             if (cli) await db.from('customers').update({ pedidos_count: (cli.pedidos_count || 0) + 1, gasto_total: (+cli.gasto_total || 0) + total, updated_at: new Date().toISOString() }).eq('id', cli.id);
             r.estado._gravado = true;
             await db.from('conversations').update({ estado: r.estado }).eq('id', conv.id);
