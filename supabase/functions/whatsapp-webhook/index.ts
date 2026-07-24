@@ -5,7 +5,9 @@
 //   GET  → verificação do webhook (hub.challenge) exigida pela Meta.
 //   POST → mensagem do cliente: identifica o restaurante pelo phone_number_id,
 //          carrega cardápio+config+estado do banco, roda engine.js, responde
-//          pela Cloud API e persiste tudo. Também registra falhas de entrega.
+//          pela Cloud API. NÃO guarda transcrição da conversa (escala): só o
+//          estado transitório + logs compactos (event_logs) dos eventos que
+//          importam — pedido fechado, atendente assumido, falha de entrega.
 //
 // Segredos (supabase secrets set ...): WHATSAPP_VERIFY_TOKEN, WHATSAPP_TOKEN.
 // SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY são injetados pela plataforma.
@@ -119,32 +121,35 @@ Deno.serve(async (req) => {
             .select().single();
           await db.from('customers').upsert({ restaurant_id: rest.id, wa_id: from }, { onConflict: 'restaurant_id,wa_id', ignoreDuplicates: true });
 
-          // dedupe: se já processamos esta wam_id, ignora
-          if (msg.id) {
-            const { data: dup } = await db.from('messages').select('id').eq('wam_id', msg.id).maybeSingle();
-            if (dup) continue;
-          }
-          await db.from('messages').insert({ conversation_id: conv.id, quem: 'cliente', texto, wam_id: msg.id });
+          // dedupe leve: se esta wam_id é a última já processada, ignora.
+          // NÃO guardamos transcrição de conversa (escala) — só o último id.
+          if (msg.id && conv.last_wam_id === msg.id) continue;
 
-          if (conv.humano) continue;                          // atendente assumiu
+          if (conv.humano) {                                  // atendente assumiu
+            await db.from('conversations').update({ last_wam_id: msg.id, last_at: new Date().toISOString() }).eq('id', conv.id);
+            continue;
+          }
 
           // roda o robô
           const estado = (conv.estado && Object.keys(conv.estado).length) ? conv.estado : estadoInicial();
           const r = responder(texto, estado, { cardapio, config, hoje: diaSemanaBR() });
 
-          // persiste estado + envia respostas
-          await db.from('conversations').update({ estado: r.estado, humano: !!r.estado.humano, last_at: new Date().toISOString() }).eq('id', conv.id);
-          for (const t of r.respostas) {
-            await enviarTexto(phoneNumberId, from, t);
-            await db.from('messages').insert({ conversation_id: conv.id, quem: 'bot', texto: t });
+          // persiste estado (transitório) + envia respostas — sem gravar textos
+          await db.from('conversations').update({ estado: r.estado, humano: !!r.estado.humano, last_wam_id: msg.id, last_at: new Date().toISOString() }).eq('id', conv.id);
+          for (const t of r.respostas) await enviarTexto(phoneNumberId, from, t);
+
+          // log compacto: cliente pediu atendente humano
+          if (r.estado.humano) {
+            await db.from('event_logs').insert({ restaurant_id: rest.id, tipo: 'humano', descricao: `Cliente ${from} pediu atendente` });
           }
 
-          // pedido fechado → grava e atualiza o cliente
+          // pedido fechado → grava o pedido, o log e atualiza o cliente
           if (r.estado.step === 'concluido' && r.estado.pagamento && !r.estado._gravado) {
             const total = (r.estado.cart ?? []).reduce((s: number, i: any) => s + i.preco * i.qtd, 0) + (config.entregaGratis ? 0 : (+config.taxaEntrega || 0));
-            await db.from('orders').insert({ restaurant_id: rest.id, itens: r.estado.cart, endereco: r.estado.endereco, pagamento: r.estado.pagamento, total, status: 'novo' });
             const { data: cli } = await db.from('customers').select('id,pedidos_count,gasto_total').eq('restaurant_id', rest.id).eq('wa_id', from).single();
-            if (cli) await db.from('customers').update({ nome: cli.nome, pedidos_count: (cli.pedidos_count || 0) + 1, gasto_total: (+cli.gasto_total || 0) + total, updated_at: new Date().toISOString() }).eq('id', cli.id);
+            await db.from('orders').insert({ restaurant_id: rest.id, customer_id: cli?.id ?? null, itens: r.estado.cart, endereco: r.estado.endereco, pagamento: r.estado.pagamento, total, status: 'novo' });
+            await db.from('event_logs').insert({ restaurant_id: rest.id, tipo: 'pedido', descricao: `Pedido de ${from} — ${r.estado.pagamento}`, valor: total, meta: { itens: (r.estado.cart ?? []).length } });
+            if (cli) await db.from('customers').update({ pedidos_count: (cli.pedidos_count || 0) + 1, gasto_total: (+cli.gasto_total || 0) + total, updated_at: new Date().toISOString() }).eq('id', cli.id);
             r.estado._gravado = true;
             await db.from('conversations').update({ estado: r.estado }).eq('id', conv.id);
           }

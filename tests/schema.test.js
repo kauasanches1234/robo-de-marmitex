@@ -16,7 +16,8 @@ catch (e) { check('migrações são idempotentes (2ª passada ok)', false); cons
 
 // ── tabelas esperadas existem ──
 const tabs = (await db.query(`select table_name from information_schema.tables where table_schema='public'`)).rows.map((r) => r.table_name);
-check('todas as tabelas existem', ['restaurants', 'menu_items', 'customers', 'conversations', 'messages', 'orders'].every((t) => tabs.includes(t)));
+check('todas as tabelas existem', ['restaurants', 'menu_items', 'customers', 'conversations', 'orders', 'event_logs'].every((t) => tabs.includes(t)));
+check('a tabela messages NÃO existe (sem transcrição, escala)', !tabs.includes('messages'));
 
 // ── defaults do schema (dias, precos, config_extra, taxa) ──
 const u1 = (await db.query('insert into auth.users default values returning id')).rows[0].id;
@@ -34,10 +35,8 @@ check('menu_items.ativo default true', it1.ativo === true);
 // ── CHECK constraints (integridade) ──
 await deveFalhar('tipo inválido é rejeitado', () => db.query("insert into menu_items (restaurant_id, nome, tipo) values ($1,'X','sobremesa')", [r1.id]));
 await deveFalhar('status de pedido inválido é rejeitado', () => db.query("insert into orders (restaurant_id, status) values ($1,'entregue_ontem')", [r1.id]));
-await deveFalhar('quem inválido em messages é rejeitado', async () => {
-  const c = (await db.query('insert into conversations (restaurant_id, wa_id) values ($1,$2) returning id', [r1.id, '551'])).rows[0];
-  await db.query("insert into messages (conversation_id, quem, texto) values ($1,'gerente','oi')", [c.id]);
-});
+await deveFalhar('tipo inválido em event_logs é rejeitado', () => db.query("insert into event_logs (restaurant_id, tipo) values ($1,'fofoca')", [r1.id]));
+check('event_logs aceita tipo válido (pedido)', (await db.query("insert into event_logs (restaurant_id, tipo, descricao, valor) values ($1,'pedido','x',35) returning id", [r1.id])).rows.length === 1);
 await deveFalhar('taxa negativa é rejeitada', () => db.query('insert into restaurants (owner_id, nome, taxa_entrega) values ($1,$2,$3)', [u1, 'Neg', -1]));
 
 // ── unicidade ──
@@ -64,7 +63,7 @@ const cli2 = (await db.query("update customers set nome='B' where id=$1 returnin
 check('trigger touch_updated_at mexe no updated_at', new Date(cli2.updated_at) > new Date(cli.updated_at));
 
 // ── RLS: dono só enxerga o próprio restaurante ──
-check('RLS ligada em todas as tabelas', (await db.query(`select bool_and(relrowsecurity) b from pg_class where relname in ('restaurants','menu_items','customers','conversations','messages','orders')`)).rows[0].b === true);
+check('RLS ligada em todas as tabelas', (await db.query(`select bool_and(relrowsecurity) b from pg_class where relname in ('restaurants','menu_items','customers','conversations','orders','event_logs')`)).rows[0].b === true);
 
 await comoUsuario(db, u1, async () => {
   const rs = (await db.query('select nome from restaurants')).rows;
@@ -79,6 +78,19 @@ await comoUsuario(db, u2, async () => {
   const rs = (await db.query('select nome from restaurants')).rows;
   check('u2 vê o próprio R2 e NÃO vê o R1 (isolamento)', rs.some(r => r.nome === 'R2') && !rs.some(r => r.nome === 'R1'));
 });
+
+// ── event_logs respeita a RLS (isolamento) ──
+await db.query("insert into event_logs (restaurant_id, tipo, descricao) values ($1,'sistema','de u1')", [r1.id]);
+await comoUsuario(db, u1, async () => {
+  check('u1 vê os event_logs do próprio restaurante', (await db.query('select count(*)::int n from event_logs')).rows[0].n >= 1);
+});
+await comoUsuario(db, u2, async () => {
+  check('u2 NÃO vê os event_logs do u1', (await db.query("select count(*)::int n from event_logs where descricao='de u1'")).rows[0].n === 0);
+});
+
+// ── higiene: função apaga conversas antigas (estado é transitório) ──
+await db.query("insert into conversations (restaurant_id, wa_id, last_at) values ($1,$2, now() - interval '48 hours')", [r1.id, 'velho']);
+check('limpar_conversas_antigas remove conversa idle > 24h', (await db.query('select limpar_conversas_antigas(24) n')).rows[0].n >= 1);
 
 // ── onboarding: novo usuário ganha 1 restaurante automaticamente ──
 const u3 = (await db.query('insert into auth.users default values returning id')).rows[0].id;
