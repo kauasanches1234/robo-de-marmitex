@@ -6,6 +6,9 @@
 <title>Painel do Criador — Robô de Marmitex</title>
 <link rel="icon" type="image/svg+xml" href="favicon.svg" />
 <link rel="apple-touch-icon" href="favicon.svg" />
+<script src="vendor/supabase.js"></script>
+<script src="config.js" onerror="window.__semConfig=1"></script>
+<script src="js/auth.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;500;600;700&family=Poppins:wght@500;600;700&display=swap" rel="stylesheet" />
@@ -228,16 +231,40 @@ const isActive=t=>!t.bloqueado&&daysLeft(t.liberadoAte)>=0;
 let selectedId=null,filter='',mode='empty',confirmRemove=false;
 
 /* ---------- LOGIN ---------- */
+// Só o DONO DO ROBÔ (super-admin) entra aqui. Com Supabase configurado, é login
+// real (Auth). Sem config (dev local), cai no modo demo.
+const SUPERADMIN='kauapratt17@gmail.com';
+function erroLogin(msg){$('#loginErr').textContent=msg||'E-mail ou senha incorretos.';$('#loginErr').classList.add('show');}
 function doLogin(){
   const email=$('#email').value.trim().toLowerCase(),senha=$('#senha').value;
-  if(email===CRED.email&&senha===CRED.senha){sessionStorage.setItem('criador_logado','1');$('#whoName').textContent=email;enterApp();}
-  else $('#loginErr').classList.add('show');
+  $('#loginErr').classList.remove('show');
+  if(window.Auth&&Auth.enabled){
+    Auth.entrar(email,senha).then(()=>{
+      if(email!==SUPERADMIN){Auth.sair();erroLogin('Acesso restrito ao dono do sistema.');return;}
+      $('#whoName').textContent=email;enterApp();
+    }).catch(err=>erroLogin(err&&err.message));
+  }else{ // demo (sem Supabase)
+    if(email===CRED.email&&senha===CRED.senha){sessionStorage.setItem('criador_logado','1');$('#whoName').textContent=email;enterApp();}
+    else erroLogin();
+  }
 }
 $('#loginForm').addEventListener('submit',e=>{e.preventDefault();doLogin();});
 $('#email').addEventListener('input',()=>$('#loginErr').classList.remove('show'));
 $('#senha').addEventListener('input',()=>$('#loginErr').classList.remove('show'));
-$('#logoutBtn').onclick=()=>{sessionStorage.removeItem('criador_logado');location.reload();};
-function enterApp(){$('#loginView').style.display='none';$('#appView').style.display='block';renderKPIs();renderList();renderDetail();}
+$('#logoutBtn').onclick=()=>{if(window.Auth&&Auth.enabled){Auth.sair().then(()=>location.reload());}else{sessionStorage.removeItem('criador_logado');location.reload();}};
+function enterApp(){
+  $('#loginView').style.display='none';$('#appView').style.display='block';
+  if(window.Auth&&Auth.enabled){carregarRestaurantesReais().then(()=>{renderKPIs();renderList();renderDetail();});}
+  else{renderKPIs();renderList();renderDetail();}
+}
+// Carrega os restaurantes REAIS do banco (o super-admin enxerga todos pela RLS).
+// Mapeamento simples: o que o banco tem (nome). Campos de gestão ficam neutros.
+function carregarRestaurantesReais(){
+  return Auth.client.from('restaurants').select('id,nome,created_at').order('created_at').then(res=>{
+    if(res.error){console.error(res.error);return;}
+    TENANTS=(res.data||[]).map(r=>({id:r.id,nome:r.nome||'Restaurante',cidade:'—',dono:'—',telefone:'—',criadoEm:r.created_at,liberadoAte:null,bloqueado:false,pedidos:0,gasto:0}));
+  }).catch(e=>console.error(e));
+}
 
 /* ---------- KPIs ---------- */
 function renderKPIs(){
@@ -372,7 +399,9 @@ function ensureDemo(){
 ensureDemo();
 
 /* ---------- BOOT ---------- */
-if(sessionStorage.getItem('criador_logado')==='1'){enterApp();}
+if(window.Auth&&Auth.enabled){
+  Auth.email().then(em=>{if(em===SUPERADMIN){$('#whoName').textContent=em;enterApp();}});
+}else if(sessionStorage.getItem('criador_logado')==='1'){enterApp();}
 </script>
 </body>
 </html>
