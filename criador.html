@@ -4,15 +4,17 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Painel do Criador — Robô de Marmitex</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg" />
+<link rel="apple-touch-icon" href="favicon.svg" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;500;600;700&family=Poppins:wght@500;600;700&display=swap" rel="stylesheet" />
 <style>
   :root{
-    --bg:#F1F5F9;--surface:#FFFFFF;--ink:#0F172A;--muted:#475569;--faint:#94A3B8;--line:#E2E8F0;
-    --primary:#4F46E5;--primary-soft:#EEF2FF;--brand:#EA580C;--brand-soft:#FFF7ED;
+    --bg:#FBF5EE;--surface:#FFFFFF;--ink:#2A1D14;--muted:#7A6857;--faint:#B3A594;--line:#ECE1D5;
+    --primary:#D2542A;--primary-soft:#FBEADF;--brand:#D2542A;--brand-soft:#FCEFE7;
     --ok:#16A34A;--ok-soft:#F0FDF4;--warn:#D97706;--warn-soft:#FFFBEB;--danger:#DC2626;--danger-soft:#FEF2F2;
-    --radius:16px;--shadow:0 1px 2px rgba(15,23,42,.04),0 6px 16px rgba(15,23,42,.045);--shadow-sm:0 1px 2px rgba(15,23,42,.05);
+    --radius:16px;--shadow:0 1px 2px rgba(42,29,20,.04),0 6px 16px rgba(42,29,20,.045);--shadow-sm:0 1px 2px rgba(42,29,20,.05);
   }
   *{box-sizing:border-box;margin:0;padding:0;}
   html,body{height:100%;}
@@ -20,12 +22,12 @@
   h1,h2,h3{font-family:'Poppins',sans-serif;}
   button{font-family:inherit;cursor:pointer;border:none;background:none;}
   input,select{font-family:inherit;}
-  ::-webkit-scrollbar{width:8px;height:8px;}::-webkit-scrollbar-thumb{background:#CBD5E1;border-radius:4px;}
+  ::-webkit-scrollbar{width:8px;height:8px;}::-webkit-scrollbar-thumb{background:#D9CBBA;border-radius:4px;}
 
   /* LOGIN */
-  .login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;background:radial-gradient(120% 120% at 50% 0%,#312E81 0%,#1E1B4B 45%,#0F172A 100%);}
+  .login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;background:radial-gradient(120% 120% at 50% 0%,#8A3517 0%,#5E2410 45%,#2A1D14 100%);}
   .login-card{width:100%;max-width:400px;background:var(--surface);border-radius:22px;box-shadow:0 20px 60px rgba(0,0,0,.35);padding:34px 30px;}
-  .login-logo{width:54px;height:54px;border-radius:15px;background:linear-gradient(145deg,#FB923C 0%,#EA580C 55%,#C2410C 100%);box-shadow:0 4px 14px rgba(234,88,12,.35),inset 0 1px 0 rgba(255,255,255,.25);display:grid;place-items:center;color:#fff;margin:0 auto 16px;}
+  .login-logo{width:54px;height:54px;border-radius:15px;background:linear-gradient(145deg,#E8794A 0%,#D2542A 55%,#A8431C 100%);box-shadow:0 4px 14px rgba(210,84,42,.35),inset 0 1px 0 rgba(255,255,255,.25);display:grid;place-items:center;color:#fff;margin:0 auto 16px;}
   .login-card h1{font-size:21px;text-align:center;letter-spacing:-.02em;}
   .login-card .sub{text-align:center;color:var(--faint);font-size:13px;margin-top:4px;margin-bottom:24px;}
   .field{margin-bottom:14px;}
@@ -41,11 +43,11 @@
   /* APP */
   .app{display:none;}
   .topbar{height:64px;background:var(--surface);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:14px;padding:0 24px;position:sticky;top:0;z-index:30;}
-  .logo{width:38px;height:38px;border-radius:11px;flex:none;background:linear-gradient(145deg,#FB923C 0%,#EA580C 55%,#C2410C 100%);box-shadow:0 2px 8px rgba(234,88,12,.28),inset 0 1px 0 rgba(255,255,255,.25);display:grid;place-items:center;color:#fff;}
+  .logo{width:38px;height:38px;border-radius:11px;flex:none;background:linear-gradient(145deg,#E8794A 0%,#D2542A 55%,#A8431C 100%);box-shadow:0 2px 8px rgba(210,84,42,.28),inset 0 1px 0 rgba(255,255,255,.25);display:grid;place-items:center;color:#fff;}
   .topbar .title{font-weight:700;font-size:16px;letter-spacing:-.01em;}.topbar .subtitle{font-size:12px;color:var(--faint);}
   .who{margin-left:auto;display:flex;align-items:center;gap:12px;}.who .nm{font-size:13px;font-weight:600;}
   .btn-out{display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:600;color:var(--muted);background:var(--bg);padding:8px 13px;border-radius:10px;}
-  .btn-out:hover{background:#E2E8F0;}
+  .btn-out:hover{background:#ECE1D5;}
 
   .stage{max-width:1200px;margin:0 auto;padding:24px;}
   .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px;}
@@ -73,7 +75,7 @@
   .rest-right{display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex:none;}
   .chip{font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:999px;white-space:nowrap;display:inline-flex;align-items:center;gap:5px;}
   .chip.ok{background:var(--ok-soft);color:var(--ok);}.chip.warn{background:var(--warn-soft);color:#B45309;}
-  .chip.danger{background:var(--danger-soft);color:var(--danger);}.chip.slate{background:#F1F5F9;color:var(--muted);}
+  .chip.danger{background:var(--danger-soft);color:var(--danger);}.chip.slate{background:#FBF5EE;color:var(--muted);}
   .rest-val{font-size:12.5px;font-weight:700;color:var(--muted);}
 
   .detail-empty{padding:50px 24px;text-align:center;color:var(--faint);}.detail-empty svg{margin-bottom:12px;}
@@ -145,7 +147,7 @@
 
     <main class="stage">
       <div class="kpis">
-        <div class="kpi"><div class="label"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4F46E5" stroke-width="2" stroke-linecap="round"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg> Restaurantes</div><div class="value" id="kTotal">0</div></div>
+        <div class="kpi"><div class="label"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#D2542A" stroke-width="2" stroke-linecap="round"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg> Restaurantes</div><div class="value" id="kTotal">0</div></div>
         <div class="kpi"><div class="label"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#D97706" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> Vencem em breve</div><div class="value" id="kSoon">0</div></div>
         <div class="kpi ok"><div class="label"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16A34A" stroke-width="2" stroke-linecap="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg> Liberados</div><div class="value" id="kOk">0</div></div>
         <div class="kpi danger"><div class="label"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#DC2626" stroke-width="2" stroke-linecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Bloqueados/Vencidos</div><div class="value" id="kBad">0</div></div>
@@ -162,7 +164,7 @@
           <div class="card-h"><h2 id="detailTitle">Detalhes</h2></div>
           <div id="detailBody">
             <div class="detail-empty">
-              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#CBD5E1" stroke-width="1.6" stroke-linecap="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#D9CBBA" stroke-width="1.6" stroke-linecap="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
               <div>Selecione um restaurante ou clique em <b>Adicionar</b>.</div>
             </div>
           </div>
@@ -186,7 +188,7 @@
 // (login real + RLS no banco). Hoje o painel só mexe em localStorage local, sem
 // dados reais no servidor — por isso o risco atual é baixo. Ver SEGURANCA.md.
 const CRED={email:'admin@robo.com',senha:'1234'};
-const COLORS=['#4F46E5','#EA580C','#16A34A','#0EA5E9','#DB2777','#7C3AED','#0891B2','#CA8A04'];
+const COLORS=['#D2542A','#D2542A','#16A34A','#0EA5E9','#DB2777','#7C3AED','#0891B2','#CA8A04'];
 const TSTORE='criador_tenants_v1';
 const DAY=86400000;
 
@@ -265,7 +267,7 @@ function renderDetail(){
   if(mode==='add'){renderAddForm(body);$('#detailTitle').textContent='Novo restaurante';return;}
   $('#detailTitle').textContent='Detalhes';
   const t=TENANTS.find(x=>x.id===selectedId);
-  if(!t){body.innerHTML='<div class="detail-empty"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#CBD5E1" stroke-width="1.6" stroke-linecap="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg><div>Selecione um restaurante ou clique em <b>Adicionar</b>.</div></div>';return;}
+  if(!t){body.innerHTML='<div class="detail-empty"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#D9CBBA" stroke-width="1.6" stroke-linecap="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg><div>Selecione um restaurante ou clique em <b>Adicionar</b>.</div></div>';return;}
   const[lbl,cls]=accessStatus(t);const dl=daysLeft(t.liberadoAte);
   body.innerHTML=`<div style="padding:18px">
     <div class="det-head"><div class="det-av" style="background:${colorOf(t.id)}">${esc(initials(t.nome))}</div><div style="flex:1"><div class="det-name">${esc(t.nome)}</div><div class="det-meta">${esc(t.cidade)}</div></div><span class="chip ${cls}">${lbl}</span></div>
@@ -296,7 +298,7 @@ function renderDetail(){
     </div>
 
     <p class="sec-title">Histórico de liberações</p>
-    <div class="pay-hist">${(t.hist&&t.hist.length)?t.hist.map(([txt,data])=>`<div class="pay-item"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span class="mes">${esc(txt)}</span><span style="font-size:11.5px;color:var(--faint)">${esc(data)}</span></div>`).join(''):'<div class="pay-item"><span class="mes" style="color:var(--faint)">Sem registros.</span></div>'}</div>
+    <div class="pay-hist">${(t.hist&&t.hist.length)?t.hist.map(([txt,data])=>`<div class="pay-item"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#B3A594" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span class="mes">${esc(txt)}</span><span style="font-size:11.5px;color:var(--faint)">${esc(data)}</span></div>`).join(''):'<div class="pay-item"><span class="mes" style="color:var(--faint)">Sem registros.</span></div>'}</div>
 
     <p class="sec-title">Contato</p>
     <div class="contact">
