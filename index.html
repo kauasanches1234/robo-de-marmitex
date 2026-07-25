@@ -6,6 +6,10 @@
 <title>Robô de Marmitex — Painel do Restaurante</title>
 <link rel="icon" type="image/svg+xml" href="favicon.svg" />
 <link rel="apple-touch-icon" href="favicon.svg" />
+<script src="vendor/supabase.js"></script>
+<script src="config.js" onerror="window.__semConfig=1"></script>
+<script src="js/auth.js"></script>
+<script type="module">import { createRepo } from './js/repo.js'; window.createRepo = createRepo;</script>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;500;600;700&family=Poppins:wght@500;600;700&display=swap" rel="stylesheet" />
@@ -446,6 +450,20 @@
 </style>
 </head>
 <body>
+<!-- Portão de login (só aparece com Supabase configurado; sem config = modo local) -->
+<div id="loginGate" style="display:none;position:fixed;inset:0;z-index:1000;background:radial-gradient(120% 120% at 50% 0%,#8A3517,#5E2410 45%,#2A1D14);align-items:center;justify-content:center;padding:24px;">
+  <form id="lgForm" style="width:100%;max-width:380px;background:#fff;border-radius:22px;box-shadow:0 20px 60px rgba(0,0,0,.35);padding:32px 28px;font-family:'Open Sans',system-ui,sans-serif;">
+    <div style="width:52px;height:52px;border-radius:15px;background:linear-gradient(145deg,#E8794A,#D2542A 55%,#A8431C);display:grid;place-items:center;margin:0 auto 16px;color:#fff;">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 11h17"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M9 6c-.7-.9-.7-1.8 0-2.7"/><path d="M12 6c-.7-.9-.7-1.8 0-2.7"/><path d="M15 6c-.7-.9-.7-1.8 0-2.7"/></svg>
+    </div>
+    <h1 style="font-size:20px;text-align:center;color:#2A1D14;font-weight:700;">Painel do Restaurante</h1>
+    <div style="text-align:center;color:#B3A594;font-size:13px;margin:4px 0 20px;">Entre com a sua conta</div>
+    <div id="loginGateErr" style="display:none;background:#FEF2F2;color:#DC2626;font-size:12.5px;font-weight:600;padding:9px 12px;border-radius:10px;margin-bottom:12px;"></div>
+    <input id="lgEmail" type="email" autocomplete="username" placeholder="E-mail" style="width:100%;border:1px solid #ECE1D5;border-radius:11px;padding:11px 14px;font-size:14px;margin-bottom:10px;outline:none;box-sizing:border-box;" />
+    <input id="lgSenha" type="password" autocomplete="current-password" placeholder="Senha" style="width:100%;border:1px solid #ECE1D5;border-radius:11px;padding:11px 14px;font-size:14px;margin-bottom:14px;outline:none;box-sizing:border-box;" />
+    <button type="submit" style="width:100%;background:#D2542A;color:#fff;font-weight:700;font-size:14.5px;padding:12px;border-radius:11px;border:none;cursor:pointer;">Entrar</button>
+  </form>
+</div>
 
   <header class="topbar">
     <div class="logo" aria-hidden="true"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 11h17"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M9 6c-.7-.9-.7-1.8 0-2.7"/><path d="M12 6c-.7-.9-.7-1.8 0-2.7"/><path d="M15 6c-.7-.9-.7-1.8 0-2.7"/></svg></div>
@@ -1616,6 +1634,7 @@ $('#saveBtn').onclick=()=>{
   dirty=false;$('#saveSt').textContent='Tudo salvo.';$('#saveSt').classList.remove('dirty');
   $('#topSub').textContent='Painel do dono · '+R().nome;
   enterConfig();toast('Configurações salvas ✓');
+  if(typeof nuvemAtiva==='function'&&nuvemAtiva())nuvemSalvar().then(()=>toast('Sincronizado na nuvem ☁️')).catch(()=>toast('Falha ao salvar na nuvem ⚠️'));
 };
 $('#discardBtn').onclick=()=>{enterConfig();toast('Alterações descartadas');};
 
@@ -2160,6 +2179,57 @@ setInterval(limparConversasParadas,15000);
 $('#topSub').textContent='Painel do dono · '+R().nome;
 renderAt();ensureDemoTenant();checkAccess();showTab('at');
 window.addEventListener('storage',e=>{if(e.key==='criador_tenants_v1')checkAccess();});
+
+/* ---------- NUVEM (Supabase): login do dono do restaurante + carregar/salvar ----------
+   Aditivo e defensivo: sem config → modo local (demo). Se a nuvem falhar, a
+   página não trava — cai no que tem localmente. Roda no mesmo escopo, então usa
+   R/DB/saveDB/_seq/renderAt/showTab direto. */
+function nuvemAtiva(){return !!(window.Auth&&window.Auth.enabled);}
+function nuvemErr(m){const e=$('#loginGateErr');if(e){e.textContent=m||'E-mail ou senha incorretos.';e.style.display='block';}}
+function esperarRepo(){return new Promise(res=>{(function chk(){window.createRepo?res():setTimeout(chk,30);})();});}
+function nuvemRepoDoDono(session){
+  return esperarRepo().then(()=>Auth.client.from('restaurants').select('*').eq('owner_id',session.user.id).limit(1)).then(r=>{
+    if(r.error)throw new Error(r.error.message);
+    const rest=(r.data||[])[0];if(!rest)throw new Error('Sem restaurante para este usuário.');
+    window.__restId=rest.id;return window.createRepo(Auth.client,rest.id);
+  });
+}
+function nuvemBotaoSair(){
+  if($('#sairNuvem'))return;
+  const b=document.createElement('button');b.id='sairNuvem';b.textContent='Sair';
+  b.style.cssText='position:fixed;top:13px;right:16px;z-index:900;background:var(--surface);border:1px solid var(--line);color:var(--muted);font-weight:700;font-size:12px;padding:6px 12px;border-radius:10px;cursor:pointer;';
+  b.onclick=()=>Auth.sair().then(()=>location.reload());
+  document.body.appendChild(b);
+}
+function nuvemHidratar(session){
+  return nuvemRepoDoDono(session).then(repo=>Promise.all([repo.carregarConfig(),repo.carregarCardapio()]).then(([cfg,cardapio])=>{
+    const r=DB.restaurant;
+    if(cfg.nome)r.nome=cfg.nome;r.pixKey=cfg.pixKey;r.horario=cfg.horario;
+    r.taxaEntrega=cfg.taxaEntrega;r.entregaGratis=cfg.entregaGratis;r.tempoEntrega=cfg.tempoEntrega;
+    if(cfg.mapa)r.mapa=cfg.mapa;if(cfg.peculiaridades&&cfg.peculiaridades.length)r.peculiaridades=cfg.peculiaridades;
+    if(cardapio.length)r.cardapio=cardapio.map(it=>Object.assign({},it,{id:++_seq}));
+    saveDB();
+    $('#topSub').textContent='Painel do dono · '+R().nome;renderAt();checkAccess();showTab('at');
+    $('#loginGate').style.display='none';nuvemBotaoSair();
+  }));
+}
+function nuvemSalvar(){
+  if(!nuvemAtiva()||!window.__restId)return Promise.resolve();
+  const repo=window.createRepo(Auth.client,window.__restId);
+  return Promise.all([repo.salvarConfig(R()),repo.salvarCardapio(R().cardapio)]);
+}
+if(nuvemAtiva()){
+  $('#lgForm').addEventListener('submit',e=>{
+    e.preventDefault();$('#loginGateErr').style.display='none';
+    Auth.entrar(($('#lgEmail').value||'').trim().toLowerCase(),$('#lgSenha').value)
+      .then(()=>Auth.sessao()).then(s=>nuvemHidratar(s))
+      .catch(err=>nuvemErr(err&&err.message));
+  });
+  Auth.sessao().then(s=>{
+    if(s){nuvemHidratar(s).catch(err=>{console.error('nuvem:',err);$('#loginGate').style.display='none';nuvemBotaoSair();});}
+    else{$('#loginGate').style.display='flex';}
+  });
+}
 
 /* expõe para a bateria de testes (e o ConversationEngine) */
 window.__app={parseOrder,matchItem,lev,R,DB,taxa,handleCustomer,cur,convs:()=>convs,greet,newConv,selectConv,checkAccess,findProduct,isBebida,saveDB,get draft(){return draft;},showTab,ConversationEngine,limparConversasParadas,get TTL(){return TTL_MS;},geocode,zonaDoPonto,resolverZona,mapaCfg,distM,zonaNome,naCobertura,areasCfg,addArea,addZona,alertarAtendente,sinalizarChat,salvarChatsLog,exportarChats,garantirCidade,reverseCidade,coberturaBounds,montarQueryEndereco,clampZona,raioMaxZona,areaDaZona,clampTodasZonas,setSel,renderMeshCtrl,meshSetRaio,selAtual};
