@@ -2188,11 +2188,16 @@ function nuvemAtiva(){return !!(window.Auth&&window.Auth.enabled);}
 function nuvemErr(m){const e=$('#loginGateErr');if(e){e.textContent=m||'E-mail ou senha incorretos.';e.style.display='block';}}
 function esperarRepo(){return new Promise(res=>{(function chk(){window.createRepo?res():setTimeout(chk,30);})();});}
 function nuvemRepoDoDono(session){
-  return esperarRepo().then(()=>Auth.client.from('restaurants').select('*').eq('owner_id',session.user.id).limit(1)).then(r=>{
+  const uid=session.user.id;
+  return esperarRepo().then(()=>Auth.client.from('restaurants').select('*').eq('owner_id',uid).limit(1)).then(r=>{
     if(r.error)throw new Error(r.error.message);
-    const rest=(r.data||[])[0];if(!rest)throw new Error('Sem restaurante para este usuário.');
-    window.__restId=rest.id;return window.createRepo(Auth.client,rest.id);
-  });
+    const rest=(r.data||[])[0];
+    if(rest)return rest;
+    // conta criada antes do gatilho de onboarding → cria o restaurante agora
+    return Auth.client.from('restaurants').insert({owner_id:uid,nome:'Meu Restaurante'}).select().single().then(ins=>{
+      if(ins.error)throw new Error(ins.error.message);return ins.data;
+    });
+  }).then(rest=>{window.__restId=rest.id;return window.createRepo(Auth.client,rest.id);});
 }
 function nuvemBotaoSair(){
   if($('#sairNuvem'))return;
@@ -2219,16 +2224,18 @@ function nuvemSalvar(){
   return Promise.all([repo.salvarConfig(R()),repo.salvarCardapio(R().cardapio)]);
 }
 if(nuvemAtiva()){
+  // entra mesmo se a carga dos dados falhar (já está autenticado); só erro de
+  // AUTENTICAÇÃO (senha errada) mantém a tela de login com a mensagem.
+  const entrarEHidratar=s=>nuvemHidratar(s).catch(err=>{console.error('nuvem:',err);$('#loginGate').style.display='none';nuvemBotaoSair();toast('Entrei, mas houve um problema ao carregar seus dados ⚠️');});
   $('#lgForm').addEventListener('submit',e=>{
     e.preventDefault();$('#loginGateErr').style.display='none';
+    const btn=$('#lgForm button[type=submit]');if(btn){btn.disabled=true;btn.textContent='Entrando…';}
     Auth.entrar(($('#lgEmail').value||'').trim().toLowerCase(),$('#lgSenha').value)
-      .then(()=>Auth.sessao()).then(s=>nuvemHidratar(s))
-      .catch(err=>nuvemErr(err&&err.message));
+      .then(()=>Auth.sessao()).then(entrarEHidratar)
+      .catch(err=>{nuvemErr(err&&err.message);})
+      .then(()=>{if(btn){btn.disabled=false;btn.textContent='Entrar';}});
   });
-  Auth.sessao().then(s=>{
-    if(s){nuvemHidratar(s).catch(err=>{console.error('nuvem:',err);$('#loginGate').style.display='none';nuvemBotaoSair();});}
-    else{$('#loginGate').style.display='flex';}
-  });
+  Auth.sessao().then(s=>{ if(s){entrarEHidratar(s);}else{$('#loginGate').style.display='flex';} });
 }
 
 /* expõe para a bateria de testes (e o ConversationEngine) */
