@@ -98,6 +98,26 @@ await comoUsuario(db, u2, async () => {
   check('dono comum (outro e-mail) NÃO vira super-admin', !nomes.includes('R1'));
 }, 'outro@exemplo.com');
 
+// ── ACESSO (cobrança): só o super-admin libera/bloqueia ──
+check('restaurants tem liberado_ate e bloqueado (default false)', (await db.query('select liberado_ate, bloqueado from restaurants where id=$1', [r1.id])).rows[0].bloqueado === false);
+// o DONO do restaurante NÃO pode se auto-liberar nem se desbloquear
+await deveFalhar('dono NÃO consegue mudar liberado_ate do próprio restaurante', () =>
+  comoUsuario(db, u1, () => db.query("update restaurants set liberado_ate = now()::date + 999 where id=$1", [r1.id]), 'dono@rest.com'));
+// bloqueia de verdade (como super-admin) para testar a tentativa de desbloqueio
+await comoUsuario(db, u2, () => db.query('update restaurants set bloqueado = true where id=$1', [r1.id]), 'kauapratt17@gmail.com');
+await deveFalhar('dono NÃO consegue se desbloquear', () =>
+  comoUsuario(db, u1, () => db.query('update restaurants set bloqueado = false where id=$1', [r1.id]), 'dono@rest.com'));
+// mas PODE editar o resto (nome etc.) normalmente
+await comoUsuario(db, u1, async () => {
+  await db.query("update restaurants set nome='R1 editado' where id=$1", [r1.id]);
+  check('dono ainda edita os dados normais do restaurante', true);
+}, 'dono@rest.com');
+// e o super-admin libera +30 dias
+await comoUsuario(db, u2, async () => {
+  await db.query("update restaurants set liberado_ate = now()::date + 30, bloqueado = false where id=$1", [r1.id]);
+}, 'kauapratt17@gmail.com');
+check('super-admin libera +30 dias', (await db.query('select liberado_ate from restaurants where id=$1', [r1.id])).rows[0].liberado_ate !== null);
+
 // ── higiene: função apaga conversas antigas (estado é transitório) ──
 await db.query("insert into conversations (restaurant_id, wa_id, last_at) values ($1,$2, now() - interval '48 hours')", [r1.id, 'velho']);
 check('limpar_conversas_antigas remove conversa idle > 24h', (await db.query('select limpar_conversas_antigas(24) n')).rows[0].n >= 1);

@@ -61,6 +61,10 @@ export function rowToConfig(row) {
     entregaGratis: bool(row.entrega_gratis),
     mapa: extra.mapa || null,
     peculiaridades: Array.isArray(extra.peculiaridades) ? extra.peculiaridades : [],
+    // acesso (cobrança) — SOMENTE LEITURA aqui: quem altera é o super-admin.
+    // De propósito fora de configToRow: o banco recusa se o dono tentar gravar.
+    liberadoAte: row.liberado_ate || null,
+    bloqueado: bool(row.bloqueado),
   };
 }
 

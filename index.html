@@ -2148,9 +2148,16 @@ function ensureDemoTenant(){
     try{localStorage.setItem('criador_tenants_v1',JSON.stringify(tenants));}catch(e){}
   }
 }
+// acesso vindo da nuvem (cobrança): preenchido no login. null = modo local.
+let acessoNuvem=null;
 function checkAccess(){
-  let tenants=null;try{tenants=JSON.parse(localStorage.getItem('criador_tenants_v1'));}catch(e){}
   let bloqueado=false;
+  if(acessoNuvem){ // com banco, a fonte da verdade é ele
+    bloqueado=!!acessoNuvem.bloqueado;
+    if(!bloqueado&&acessoNuvem.liberadoAte){const d=new Date(acessoNuvem.liberadoAte+'T00:00:00');const h=new Date();h.setHours(0,0,0,0);if(d<h)bloqueado=true;}
+    $('#blockOverlay').style.display=bloqueado?'flex':'none';return;
+  }
+  let tenants=null;try{tenants=JSON.parse(localStorage.getItem('criador_tenants_v1'));}catch(e){}
   if(tenants){
     const t=tenants.find(x=>x.id===THIS_RESTAURANT_ID);
     if(t){ // só bloqueia por BLOQUEIO explícito ou vencimento — nunca por dado ausente
@@ -2212,6 +2219,7 @@ function nuvemHidratar(session){
     if(cfg.nome)r.nome=cfg.nome;r.pixKey=cfg.pixKey;r.horario=cfg.horario;
     r.taxaEntrega=cfg.taxaEntrega;r.entregaGratis=cfg.entregaGratis;r.tempoEntrega=cfg.tempoEntrega;
     if(cfg.mapa)r.mapa=cfg.mapa;if(cfg.peculiaridades&&cfg.peculiaridades.length)r.peculiaridades=cfg.peculiaridades;
+    acessoNuvem={liberadoAte:cfg.liberadoAte,bloqueado:cfg.bloqueado}; // cobrança: manda o banco
     if(cardapio.length)r.cardapio=cardapio.map(it=>Object.assign({},it,{id:++_seq}));
     saveDB();
     $('#topSub').textContent='Painel do dono · '+R().nome;renderAt();checkAccess();showTab('at');

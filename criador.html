@@ -265,9 +265,9 @@ function enterApp(){
 // Carrega os restaurantes REAIS do banco (o super-admin enxerga todos pela RLS).
 // Mapeamento simples: o que o banco tem (nome). Campos de gestão ficam neutros.
 function carregarRestaurantesReais(){
-  return Auth.client.from('restaurants').select('id,nome,created_at').order('created_at').then(res=>{
+  return Auth.client.from('restaurants').select('id,nome,created_at,liberado_ate,bloqueado').order('created_at').then(res=>{
     if(res.error){console.error(res.error);return;}
-    TENANTS=(res.data||[]).map(r=>({id:r.id,nome:r.nome||'Restaurante',cidade:'—',dono:'—',telefone:'—',criadoEm:r.created_at,liberadoAte:null,bloqueado:false,pedidos:0,gasto:0}));
+    TENANTS=(res.data||[]).map(r=>({id:r.id,nome:r.nome||'Restaurante',cidade:'—',dono:'—',telefone:'—',criadoEm:r.created_at,liberadoAte:r.liberado_ate||null,bloqueado:!!r.bloqueado,pedidos:0,gasto:0,hist:[]}));
   }).catch(e=>console.error(e));
 }
 
@@ -349,16 +349,26 @@ function renderDetail(){
   // binds
   const lib=$('#liberarBtn'); if(lib) lib.onclick=()=>liberar(t,parseInt($('#diasInput').value)||30);
   body.querySelectorAll('.chip-dia').forEach(c=>c.onclick=()=>{$('#diasInput').value=c.dataset.d;});
-  const bb=$('#blockBtn'); if(bb) bb.onclick=()=>{t.bloqueado=true;t.hist.unshift(['Robô bloqueado',fmtDate(addDaysISO(0))]);saveTenants();renderKPIs();renderList();renderDetail();toast('Robô bloqueado 🔒');};
-  const ub=$('#unblockBtn'); if(ub) ub.onclick=()=>{t.bloqueado=false;t.hist.unshift(['Robô desbloqueado',fmtDate(addDaysISO(0))]);saveTenants();renderKPIs();renderList();renderDetail();toast('Robô desbloqueado ✓');};
+  const bb=$('#blockBtn'); if(bb) bb.onclick=()=>{t.bloqueado=true;t.hist.unshift(['Robô bloqueado',fmtDate(addDaysISO(0))]);saveTenants();renderKPIs();renderList();renderDetail();salvarAcesso(t).then(()=>toast('Robô bloqueado 🔒')).catch(e=>toast('Erro: '+e.message));};
+  const ub=$('#unblockBtn'); if(ub) ub.onclick=()=>{t.bloqueado=false;t.hist.unshift(['Robô desbloqueado',fmtDate(addDaysISO(0))]);saveTenants();renderKPIs();renderList();renderDetail();salvarAcesso(t).then(()=>toast('Robô desbloqueado ✓')).catch(e=>toast('Erro: '+e.message));};
   const rb=$('#rmBtn'); if(rb) rb.onclick=()=>{confirmRemove=true;renderDetail();};
   const rc=$('#rmCancel'); if(rc) rc.onclick=()=>{confirmRemove=false;renderDetail();};
   const rco=$('#rmConfirm'); if(rco) rco.onclick=()=>removeTenant(t.id);
 }
+// Grava o acesso no banco (só o super-admin consegue — o banco recusa os outros).
+// Sem Supabase, segue no localStorage (demo).
+function salvarAcesso(t){
+  if(!(window.Auth&&Auth.enabled))return Promise.resolve();
+  return Auth.client.from('restaurants')
+    .update({liberado_ate:t.liberadoAte,bloqueado:!!t.bloqueado}).eq('id',t.id)
+    .then(r=>{if(r.error)throw new Error(r.error.message);});
+}
 function liberar(t,dias){
   t.liberadoAte=addDaysISO(dias);t.bloqueado=false;
   t.hist.unshift(['+'+dias+' dias liberados',fmtDate(addDaysISO(0))]);
-  saveTenants();renderKPIs();renderList();renderDetail();toast('Liberado por '+dias+' dias ✓');
+  saveTenants();renderKPIs();renderList();renderDetail();
+  salvarAcesso(t).then(()=>toast('Liberado por '+dias+' dias ✓'))
+    .catch(e=>toast('Erro ao salvar: '+e.message));
 }
 function removeTenant(id){
   TENANTS=TENANTS.filter(t=>t.id!==id);saveTenants();
