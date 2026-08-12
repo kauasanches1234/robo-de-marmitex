@@ -190,6 +190,9 @@
 // qualquer um lê o código-fonte. Antes de produção, TROCAR por Supabase Auth
 // (login real + RLS no banco). Hoje o painel só mexe em localStorage local, sem
 // dados reais no servidor — por isso o risco atual é baixo. Ver SEGURANCA.md.
+// Login demo (mockup) — só vale em desenvolvimento local. Em qualquer host
+// público, se o Supabase não estiver configurado, NINGUÉM entra (fail closed).
+const EH_LOCAL=['localhost','127.0.0.1','::1',''].includes(location.hostname);
 const CRED={email:'admin@robo.com',senha:'1234'};
 const COLORS=['#D2542A','#D2542A','#16A34A','#0EA5E9','#DB2777','#7C3AED','#0891B2','#CA8A04'];
 const TSTORE='criador_tenants_v1';
@@ -243,9 +246,11 @@ function doLogin(){
       if(email!==SUPERADMIN){Auth.sair();erroLogin('Acesso restrito ao dono do sistema.');return;}
       $('#whoName').textContent=email;enterApp();
     }).catch(err=>erroLogin(err&&err.message));
-  }else{ // demo (sem Supabase)
+  }else if(EH_LOCAL){ // demo: SOMENTE em desenvolvimento local
     if(email===CRED.email&&senha===CRED.senha){sessionStorage.setItem('criador_logado','1');$('#whoName').textContent=email;enterApp();}
     else erroLogin();
+  }else{ // site público sem config → ninguém entra
+    erroLogin('Sistema em manutenção. Tente novamente em instantes.');
   }
 }
 $('#loginForm').addEventListener('submit',e=>{e.preventDefault();doLogin();});
@@ -401,7 +406,7 @@ ensureDemo();
 /* ---------- BOOT ---------- */
 if(window.Auth&&Auth.enabled){
   Auth.email().then(em=>{if(em===SUPERADMIN){$('#whoName').textContent=em;enterApp();}});
-}else if(sessionStorage.getItem('criador_logado')==='1'){enterApp();}
+}else if(EH_LOCAL&&sessionStorage.getItem('criador_logado')==='1'){enterApp();}
 </script>
 </body>
 </html>

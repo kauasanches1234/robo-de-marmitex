@@ -18,3 +18,8 @@ _local/
 
 # config local do Supabase (injetada no deploy via GitHub Secrets)
 config.js
+
+# variáveis de ambiente — NUNCA versionar (o .example fica, sem valores reais)
+.env
+.env.*
+!.env.example

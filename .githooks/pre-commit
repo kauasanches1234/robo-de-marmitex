@@ -1,0 +1,20 @@
+#!/bin/sh
+# Bloqueia commits que contenham secrets. Sem dependências: só git + grep.
+# Ativar (uma vez por clone):  git config core.hooksPath .githooks
+# Pular num commit específico:  git commit --no-verify
+
+PADROES='eyJ[A-Za-z0-9_-]\{25,\}|sb_secret_|EAA[A-Za-z0-9]\{30,\}|sk_live_|AKIA[0-9A-Z]\{16\}|BEGIN [A-Z ]*PRIVATE KEY|postgres\(ql\)\?://[^ ]*:[^ ]*@'
+
+# só o que está sendo commitado; ignora a lib vendorizada e este próprio hook
+# (os padrões acima seriam detectados como "secret" neles mesmos)
+ACHADOS=$(git diff --cached -U0 --diff-filter=ACM -- . ':!vendor/' ':!.githooks/' | grep -aE "^\+" | grep -aE "$PADROES")
+
+if [ -n "$ACHADOS" ]; then
+  echo "🚫 COMMIT BLOQUEADO — possível secret detectada:"
+  echo "$ACHADOS" | cut -c1-100 | head -5
+  echo ""
+  echo "Tire a secret do código (use variável de ambiente / GitHub Secret)."
+  echo "Se for falso positivo: git commit --no-verify"
+  exit 1
+fi
+exit 0

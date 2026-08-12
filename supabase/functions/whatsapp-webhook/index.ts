@@ -29,11 +29,12 @@ function seguroIgual(a: string, b: string): boolean {
   return r === 0;
 }
 // valida X-Hub-Signature-256 (HMAC-SHA256 do corpo com o App Secret da Meta).
-// Sem isso o webhook público aceitaria mensagens forjadas. Se APP_SECRET não
-// estiver configurado, loga aviso e deixa passar (para não travar o setup) —
-// em produção, configure SEMPRE (supabase secrets set WHATSAPP_APP_SECRET=...).
+// Sem isso o webhook público aceitaria mensagens forjadas.
+// FAIL CLOSED: sem APP_SECRET configurado, RECUSA tudo (antes deixava passar,
+// o que permitiria qualquer um forjar pedidos se o segredo fosse esquecido).
+// Configure com: supabase secrets set WHATSAPP_APP_SECRET=...
 async function assinaturaValida(req: Request, raw: string): Promise<boolean> {
-  if (!APP_SECRET) { console.warn('WHATSAPP_APP_SECRET ausente — assinatura NÃO verificada (inseguro)'); return true; }
+  if (!APP_SECRET) { console.error('WHATSAPP_APP_SECRET ausente — recusando (configure o segredo)'); return false; }
   const sig = req.headers.get('x-hub-signature-256');
   if (!sig) return false;
   const key = await crypto.subtle.importKey('raw', enc.encode(APP_SECRET), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
